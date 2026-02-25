@@ -38,38 +38,38 @@ export default function StatsGrid({ stats }: StatsGridProps) {
       marginBottom: "2rem",
     }}>
       <StatsCard
-        title="Total Vehicles"
+        title="Tổng Phương Tiện"
         value={stats.totalVehicles}
         color="#3b82f6"
       />
       <StatsCard
-        title="Available"
+        title="Sẵn Sàng"
         value={stats.availableVehicles}
         color="#10b981"
       />
       <StatsCard
-        title="Rented"
+        title="Đang Thuê"
         value={stats.rentedVehicles}
         color="#f59e0b"
       />
       <StatsCard
-        title="Maintenance"
+        title="Bảo Trì"
         value={stats.maintenanceVehicles}
         color="#ef4444"
       />
       <StatsCard
-        title="Rentals Today"
+        title="Đơn Thuê Hôm Nay"
         value={stats.rentalsToday}
         color="#8b5cf6"
       />
       <StatsCard
-        title="Rentals This Month"
+        title="Đơn Thuê Tháng Này"
         value={stats.rentalsThisMonth}
         color="#ec4899"
       />
       <StatsCard
-        title="Total Revenue"
-        value={`$${stats.totalRevenue.toLocaleString()}`}
+        title="Tổng Doanh Thu"
+        value={`${stats.totalRevenue.toLocaleString()} VNĐ`}
         color="#059669"
       />
     </div>

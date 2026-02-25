@@ -31,7 +31,7 @@ export default function RentalsPage() {
 
     const selectedVehicle = vehicles.find((v) => v.id === formData.vehicle_id);
     if (!selectedVehicle) {
-      alert("Please select a vehicle");
+      alert("Vui lòng chọn phương tiện");
       return;
     }
 
@@ -44,10 +44,10 @@ export default function RentalsPage() {
     });
 
     if (result.success) {
-      alert("Rental created successfully!");
+      alert("Đã tạo đơn thuê thành công!");
       resetForm();
     } else {
-      alert(`Error: ${result.error}`);
+      alert(`Lỗi: ${result.error}`);
     }
   };
 
@@ -65,30 +65,30 @@ export default function RentalsPage() {
   };
 
   const handleComplete = async (rental: Rental) => {
-    const days = prompt("Enter number of days rented:");
+    const days = prompt("Nhập số ngày thuê:");
     if (!days) return;
 
     const totalAmount = parseFloat(days) * rental.daily_rate;
-    const confirmed = confirm(`Total amount: $${totalAmount}. Complete rental?`);
+    const confirmed = confirm(`Tổng tiền: ${totalAmount.toLocaleString()} VNĐ. Hoàn tất đơn thuê?`);
     
     if (!confirmed) return;
 
     const result = await completeRental(rental.id, totalAmount);
     if (result.success) {
-      alert("Rental completed successfully!");
+      alert("Đã hoàn tất đơn thuê thành công!");
     } else {
-      alert(`Error: ${result.error}`);
+      alert(`Lỗi: ${result.error}`);
     }
   };
 
   const handleCancel = async (id: string) => {
-    if (!confirm("Are you sure you want to cancel this rental?")) return;
+    if (!confirm("Bạn có chắc chắn muốn hủy đơn thuê này?")) return;
 
     const result = await cancelRental(id);
     if (result.success) {
-      alert("Rental cancelled successfully!");
+      alert("Đã hủy đơn thuê thành công!");
     } else {
-      alert(`Error: ${result.error}`);
+      alert(`Lỗi: ${result.error}`);
     }
   };
 
@@ -103,7 +103,7 @@ export default function RentalsPage() {
           alignItems: "center",
           marginBottom: "1.5rem",
         }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Rentals</h1>
+          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Đơn Thuê</h1>
           <button
             onClick={() => setShowForm(!showForm)}
             style={{
@@ -116,7 +116,7 @@ export default function RentalsPage() {
               fontWeight: "500",
             }}
           >
-            {showForm ? "Cancel" : "New Rental"}
+            {showForm ? "Hủy" : "Thuê Mới"}
           </button>
         </div>
 
@@ -129,7 +129,7 @@ export default function RentalsPage() {
             marginBottom: "1.5rem",
           }}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
-              Create New Rental
+              Tạo Đơn Thuê Mới
             </h2>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
               <select
@@ -142,10 +142,10 @@ export default function RentalsPage() {
                   borderRadius: "0.375rem",
                 }}
               >
-                <option value="">Select Vehicle</option>
+                <option value="">Chọn phương tiện</option>
                 {availableVehicles.map((vehicle) => (
                   <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.code} - {vehicle.brand} {vehicle.model} (${vehicle.daily_rate}/day)
+                    {vehicle.code} - {vehicle.brand} {vehicle.model} ({vehicle.daily_rate.toLocaleString()} VNĐ/ngày)
                   </option>
                 ))}
               </select>
@@ -153,7 +153,7 @@ export default function RentalsPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <input
                   type="text"
-                  placeholder="Customer Name"
+                  placeholder="Tên khách hàng"
                   value={formData.customer_name}
                   onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
                   required
@@ -165,7 +165,7 @@ export default function RentalsPage() {
                 />
                 <input
                   type="tel"
-                  placeholder="Customer Phone"
+                  placeholder="Số điện thoại"
                   value={formData.customer_phone}
                   onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
                   required
@@ -179,7 +179,7 @@ export default function RentalsPage() {
 
               <input
                 type="text"
-                placeholder="Customer ID Number (Optional)"
+                placeholder="Số CMND/CCCD (Tùy chọn)"
                 value={formData.customer_id_number}
                 onChange={(e) => setFormData({ ...formData, customer_id_number: e.target.value })}
                 style={{
@@ -202,7 +202,7 @@ export default function RentalsPage() {
               />
 
               <textarea
-                placeholder="Notes (Optional)"
+                placeholder="Ghi chú (Tùy chọn)"
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
@@ -227,7 +227,7 @@ export default function RentalsPage() {
                     fontWeight: "500",
                   }}
                 >
-                  Create Rental
+                  Tạo Đơn Thuê
                 </button>
                 <button
                   type="button"
@@ -242,7 +242,7 @@ export default function RentalsPage() {
                     fontWeight: "500",
                   }}
                 >
-                  Cancel
+                  Hủy
                 </button>
               </div>
             </form>
@@ -250,7 +250,7 @@ export default function RentalsPage() {
         )}
 
         {loading ? (
-          <div>Loading rentals...</div>
+          <div>Đang tải đơn thuê...</div>
         ) : (
           <div style={{
             background: "white",
@@ -261,15 +261,15 @@ export default function RentalsPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Customer</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Phone</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Vehicle ID</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Start Date</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>End Date</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Rate/Day</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Total</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Status</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Actions</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Khách hàng</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Điện thoại</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mã xe</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày bắt đầu</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày kết thúc</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Giá/Ngày</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Tổng</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Trạng thái</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành động</th>
                 </tr>
               </thead>
               <tbody>
@@ -286,9 +286,9 @@ export default function RentalsPage() {
                     <td style={{ padding: "0.75rem" }}>
                       {rental.end_date ? new Date(rental.end_date).toLocaleDateString() : "-"}
                     </td>
-                    <td style={{ padding: "0.75rem" }}>${rental.daily_rate}</td>
+                    <td style={{ padding: "0.75rem" }}>{rental.daily_rate.toLocaleString()} VNĐ</td>
                     <td style={{ padding: "0.75rem" }}>
-                      {rental.total_amount ? `$${rental.total_amount}` : "-"}
+                      {rental.total_amount ? `${rental.total_amount.toLocaleString()} VNĐ` : "-"}
                     </td>
                     <td style={{ padding: "0.75rem" }}>
                       <span style={{
@@ -320,7 +320,7 @@ export default function RentalsPage() {
                                 fontSize: "0.75rem",
                               }}
                             >
-                              Complete
+                              Hoàn Tất
                             </button>
                             <button
                               onClick={() => handleCancel(rental.id)}
@@ -334,7 +334,7 @@ export default function RentalsPage() {
                                 fontSize: "0.75rem",
                               }}
                             >
-                              Cancel
+                              Hủy
                             </button>
                           </>
                         )}

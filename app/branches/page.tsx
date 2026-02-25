@@ -43,18 +43,18 @@ export default function BranchesPage() {
     if (editingBranch) {
       const result = await branchService.updateBranch(editingBranch.id, formData);
       if (result.error) {
-        alert(`Error: ${result.error}`);
+        alert(`Lỗi: ${result.error}`);
       } else {
-        alert("Branch updated successfully!");
+        alert("Đã cập nhật chi nhánh thành công!");
         resetForm();
         loadBranches();
       }
     } else {
       const result = await branchService.createBranch(formData);
       if (result.error) {
-        alert(`Error: ${result.error}`);
+        alert(`Lỗi: ${result.error}`);
       } else {
-        alert("Branch created successfully!");
+        alert("Đã tạo chi nhánh thành công!");
         resetForm();
         loadBranches();
       }
@@ -78,13 +78,13 @@ export default function BranchesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this branch?")) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa chi nhánh này?")) return;
 
     const result = await branchService.deleteBranch(id);
     if (result.error) {
-      alert(`Error: ${result.error}`);
+      alert(`Lỗi: ${result.error}`);
     } else {
-      alert("Branch deleted successfully!");
+      alert("Đã xóa chi nhánh thành công!");
       loadBranches();
     }
   };
@@ -100,7 +100,7 @@ export default function BranchesPage() {
           alignItems: "center",
           marginBottom: "1.5rem",
         }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Branches</h1>
+          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Chi Nhánh</h1>
           <button
             onClick={() => setShowForm(!showForm)}
             style={{
@@ -113,7 +113,7 @@ export default function BranchesPage() {
               fontWeight: "500",
             }}
           >
-            {showForm ? "Cancel" : "Add Branch"}
+            {showForm ? "Hủy" : "Thêm Chi Nhánh"}
           </button>
         </div>
 
@@ -126,12 +126,12 @@ export default function BranchesPage() {
             marginBottom: "1.5rem",
           }}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
-              {editingBranch ? "Edit Branch" : "Create New Branch"}
+              {editingBranch ? "Sửa Chi Nhánh" : "Tạo Chi Nhánh Mới"}
             </h2>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
               <input
                 type="text"
-                placeholder="Branch Name"
+                placeholder="Tên Chi Nhánh"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
@@ -143,7 +143,7 @@ export default function BranchesPage() {
               />
               <input
                 type="text"
-                placeholder="Address"
+                placeholder="Địa Chỉ"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 style={{
@@ -154,7 +154,7 @@ export default function BranchesPage() {
               />
               <input
                 type="tel"
-                placeholder="Phone"
+                placeholder="Số Điện Thoại"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 style={{
@@ -177,7 +177,7 @@ export default function BranchesPage() {
                     fontWeight: "500",
                   }}
                 >
-                  {editingBranch ? "Update" : "Create"}
+                  {editingBranch ? "Cập Nhật" : "Tạo Mới"}
                 </button>
                 <button
                   type="button"
@@ -192,7 +192,7 @@ export default function BranchesPage() {
                     fontWeight: "500",
                   }}
                 >
-                  Cancel
+                  Hủy
                 </button>
               </div>
             </form>
@@ -200,7 +200,7 @@ export default function BranchesPage() {
         )}
 
         {loading ? (
-          <div>Loading branches...</div>
+          <div>Đang tải chi nhánh...</div>
         ) : (
           <div style={{
             background: "white",
@@ -211,10 +211,10 @@ export default function BranchesPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Name</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Address</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Phone</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Actions</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Tên</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Địa Chỉ</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Số Điện Thoại</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành Động</th>
                 </tr>
               </thead>
               <tbody>
@@ -237,7 +237,7 @@ export default function BranchesPage() {
                             fontSize: "0.75rem",
                           }}
                         >
-                          Edit
+                          Sửa
                         </button>
                         <button
                           onClick={() => handleDelete(branch.id)}
@@ -251,7 +251,7 @@ export default function BranchesPage() {
                             fontSize: "0.75rem",
                           }}
                         >
-                          Delete
+                          Xóa
                         </button>
                       </div>
                     </td>

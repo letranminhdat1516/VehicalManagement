@@ -51,7 +51,7 @@ export default function LoginPage() {
           marginBottom: "1.5rem",
           textAlign: "center",
         }}>
-          Vehicle Rental System
+          Hệ Thống Quản Lý Thuê Xe
         </h1>
 
         <form onSubmit={handleLogin} style={{ display: "grid", gap: "1rem" }}>
@@ -66,7 +66,7 @@ export default function LoginPage() {
             </label>
             <input
               type="email"
-              placeholder="Enter your email"
+              placeholder="Nhập email của bạn"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -87,11 +87,11 @@ export default function LoginPage() {
               fontWeight: "500",
               marginBottom: "0.5rem",
             }}>
-              Password
+              Mật Khẩu
             </label>
             <input
               type="password"
-              placeholder="Enter your password"
+              placeholder="Nhập mật khẩu của bạn"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -132,7 +132,7 @@ export default function LoginPage() {
               cursor: loading ? "not-allowed" : "pointer",
             }}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
           </button>
         </form>
       </div>

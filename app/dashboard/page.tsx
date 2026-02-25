@@ -22,22 +22,22 @@ export default function DashboardPage() {
   }, [authLoading, user, router]);
 
   if (authLoading || !user) {
-    return <div style={{ padding: 40 }}>Loading...</div>;
+    return <div style={{ padding: 40 }}>Đang tải...</div>;
   }
 
   return (
     <DashboardLayout>
       <div>
         <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "1.5rem" }}>
-          Dashboard
+          Tổng Quan
         </h1>
 
         {statsLoading ? (
-          <div>Loading stats...</div>
+          <div>Đang tải thống kê...</div>
         ) : stats ? (
           <StatsGrid stats={stats} />
         ) : (
-          <div>No stats available</div>
+          <div>Không có dữ liệu thống kê</div>
         )}
 
         <div style={{
@@ -48,14 +48,14 @@ export default function DashboardPage() {
           border: "1px solid #e5e7eb",
         }}>
           <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
-            Welcome, {user.full_name}!
+            Chào mừng, {user.full_name}!
           </h2>
           <p style={{ color: "#6b7280" }}>
-            Role: <strong>{user.role}</strong>
+            Vai trò: <strong>{user.role}</strong>
           </p>
           {user.branch_id && (
             <p style={{ color: "#6b7280" }}>
-              Branch ID: <strong>{user.branch_id}</strong>
+              Chi nhánh: <strong>{user.branch_id}</strong>
             </p>
           )}
         </div>

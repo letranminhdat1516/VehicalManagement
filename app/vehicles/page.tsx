@@ -31,18 +31,18 @@ export default function VehiclesPage() {
     if (editingVehicle) {
       const result = await updateVehicle(editingVehicle.id, formData);
       if (result.success) {
-        alert("Vehicle updated successfully!");
+        alert("Đã cập nhật phương tiện thành công!");
         resetForm();
       } else {
-        alert(`Error: ${result.error}`);
+        alert(`Lỗi: ${result.error}`);
       }
     } else {
       const result = await createVehicle(formData);
       if (result.success) {
-        alert("Vehicle created successfully!");
+        alert("Đã tạo phương tiện thành công!");
         resetForm();
       } else {
-        alert(`Error: ${result.error}`);
+        alert(`Lỗi: ${result.error}`);
       }
     }
   };
@@ -80,22 +80,22 @@ export default function VehiclesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this vehicle?")) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa phương tiện này?")) return;
 
     const result = await deleteVehicle(id);
     if (result.success) {
-      alert("Vehicle deleted successfully!");
+      alert("Đã xóa phương tiện thành công!");
     } else {
-      alert(`Error: ${result.error}`);
+      alert(`Lỗi: ${result.error}`);
     }
   };
 
   const handleStatusChange = async (id: string, status: VehicleStatus) => {
     const result = await updateVehicleStatus(id, status);
     if (result.success) {
-      alert("Status updated successfully!");
+      alert("Đã cập nhật trạng thái thành công!");
     } else {
-      alert(`Error: ${result.error}`);
+      alert(`Lỗi: ${result.error}`);
     }
   };
 
@@ -110,7 +110,7 @@ export default function VehiclesPage() {
           alignItems: "center",
           marginBottom: "1.5rem",
         }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Vehicles</h1>
+          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Phương Tiện</h1>
           {user.role === "ADMIN" && (
             <button
               onClick={() => setShowForm(!showForm)}
@@ -124,7 +124,7 @@ export default function VehiclesPage() {
                 fontWeight: "500",
               }}
             >
-              {showForm ? "Cancel" : "Add Vehicle"}
+              {showForm ? "Hủy" : "Thêm Phương Tiện"}
             </button>
           )}
         </div>
@@ -138,13 +138,13 @@ export default function VehiclesPage() {
             marginBottom: "1.5rem",
           }}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
-              {editingVehicle ? "Edit Vehicle" : "Create New Vehicle"}
+              {editingVehicle ? "Chỉnh Sửa Phương Tiện" : "Tạo Phương Tiện Mới"}
             </h2>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <input
                   type="text"
-                  placeholder="Vehicle Code"
+                  placeholder="Mã xe"
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                   required
@@ -163,17 +163,17 @@ export default function VehiclesPage() {
                     borderRadius: "0.375rem",
                   }}
                 >
-                  <option value="CAR">Car</option>
-                  <option value="MOTORCYCLE">Motorcycle</option>
-                  <option value="TRUCK">Truck</option>
-                  <option value="VAN">Van</option>
+                  <option value="CAR">Ô tô</option>
+                  <option value="MOTORCYCLE">Xe máy</option>
+                  <option value="TRUCK">Xe tải</option>
+                  <option value="VAN">Xe van</option>
                 </select>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <input
                   type="text"
-                  placeholder="Brand"
+                  placeholder="Hãng xe"
                   value={formData.brand}
                   onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
                   style={{
@@ -184,7 +184,7 @@ export default function VehiclesPage() {
                 />
                 <input
                   type="text"
-                  placeholder="Model"
+                  placeholder="Mẫu xe"
                   value={formData.model}
                   onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                   style={{
@@ -198,7 +198,7 @@ export default function VehiclesPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <input
                   type="number"
-                  placeholder="Year"
+                  placeholder="Năm sản xuất"
                   value={formData.year}
                   onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
                   style={{
@@ -209,7 +209,7 @@ export default function VehiclesPage() {
                 />
                 <input
                   type="text"
-                  placeholder="Plate Number"
+                  placeholder="Biển số xe"
                   value={formData.plate_number}
                   onChange={(e) => setFormData({ ...formData, plate_number: e.target.value })}
                   style={{
@@ -223,7 +223,7 @@ export default function VehiclesPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <input
                   type="number"
-                  placeholder="Daily Rate"
+                  placeholder="Giá thuê/ngày"
                   value={formData.daily_rate}
                   onChange={(e) => setFormData({ ...formData, daily_rate: parseFloat(e.target.value) })}
                   required
@@ -242,9 +242,9 @@ export default function VehiclesPage() {
                     borderRadius: "0.375rem",
                   }}
                 >
-                  <option value="AVAILABLE">Available</option>
-                  <option value="RENTED">Rented</option>
-                  <option value="MAINTENANCE">Maintenance</option>
+                  <option value="AVAILABLE">Sẵn sàng</option>
+                  <option value="RENTED">Đang thuê</option>
+                  <option value="MAINTENANCE">Bảo trì</option>
                 </select>
               </div>
 
@@ -261,7 +261,7 @@ export default function VehiclesPage() {
                     fontWeight: "500",
                   }}
                 >
-                  {editingVehicle ? "Update" : "Create"}
+                  {editingVehicle ? "Cập Nhật" : "Tạo Mới"}
                 </button>
                 <button
                   type="button"
@@ -276,7 +276,7 @@ export default function VehiclesPage() {
                     fontWeight: "500",
                   }}
                 >
-                  Cancel
+                  Hủy
                 </button>
               </div>
             </form>
@@ -284,7 +284,7 @@ export default function VehiclesPage() {
         )}
 
         {loading ? (
-          <div>Loading vehicles...</div>
+          <div>Đang tải phương tiện...</div>
         ) : (
           <div style={{
             background: "white",
@@ -295,14 +295,14 @@ export default function VehiclesPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Code</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Type</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Brand</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Model</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Plate</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Status</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Rate/Day</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Actions</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mã</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Loại</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hãng</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mẫu</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Biển số</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Trạng thái</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Giá/Ngày</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành động</th>
                 </tr>
               </thead>
               <tbody>
@@ -344,7 +344,7 @@ export default function VehiclesPage() {
                                 fontSize: "0.75rem",
                               }}
                             >
-                              Edit
+                              Sửa
                             </button>
                             <button
                               onClick={() => handleDelete(vehicle.id)}
@@ -358,7 +358,7 @@ export default function VehiclesPage() {
                                 fontSize: "0.75rem",
                               }}
                             >
-                              Delete
+                              Xóa
                             </button>
                           </>
                         )}
@@ -375,7 +375,7 @@ export default function VehiclesPage() {
                               fontSize: "0.75rem",
                             }}
                           >
-                            Maintenance
+                            Bảo trì
                           </button>
                         )}
                         {vehicle.status === "MAINTENANCE" && (
@@ -391,7 +391,7 @@ export default function VehiclesPage() {
                               fontSize: "0.75rem",
                             }}
                           >
-                            Set Available
+                            Sẵn sàng
                           </button>
                         )}
                       </div>

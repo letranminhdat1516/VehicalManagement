@@ -15,10 +15,10 @@ export default function Navbar() {
   if (!user) return null;
 
   const navItems = [
-    { href: "/dashboard", label: "Dashboard", roles: ["ADMIN", "GUARD"] },
-    { href: "/vehicles", label: "Vehicles", roles: ["ADMIN", "GUARD"] },
-    { href: "/rentals", label: "Rentals", roles: ["ADMIN", "GUARD"] },
-    { href: "/branches", label: "Branches", roles: ["ADMIN"] },
+    { href: "/dashboard", label: "Tổng Quan", roles: ["ADMIN", "GUARD"] },
+    { href: "/vehicles", label: "Phương Tiện", roles: ["ADMIN", "GUARD"] },
+    { href: "/rentals", label: "Đơn Thuê", roles: ["ADMIN", "GUARD"] },
+    { href: "/branches", label: "Chi Nhánh", roles: ["ADMIN"] },
   ];
 
   const filteredNavItems = navItems.filter((item) =>
@@ -36,7 +36,7 @@ export default function Navbar() {
     }}>
       <div style={{ display: "flex", gap: "2rem", alignItems: "center" }}>
         <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: "bold" }}>
-          Vehicle Rental
+          Quản Lý Thuê Xe
         </h2>
         <div style={{ display: "flex", gap: "1rem" }}>
           {filteredNavItems.map((item) => (
@@ -80,7 +80,7 @@ export default function Navbar() {
             fontWeight: "500",
           }}
         >
-          Logout
+          Đăng Xuất
         </button>
       </div>
     </nav>
