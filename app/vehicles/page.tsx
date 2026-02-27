@@ -99,6 +99,19 @@ export default function VehiclesPage() {
     }
   };
 
+  const getVehicleStatusLabel = (status: VehicleStatus) => {
+    switch (status) {
+      case "AVAILABLE":
+        return "Sẵn Sàng";
+      case "RENTED":
+        return "Đang Thuê";
+      case "MAINTENANCE":
+        return "Bảo Trì";
+      default:
+        return status;
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -324,7 +337,7 @@ export default function VehiclesPage() {
                         color: vehicle.status === "AVAILABLE" ? "#065f46" :
                                vehicle.status === "RENTED" ? "#92400e" : "#991b1b",
                       }}>
-                        {vehicle.status}
+                        {getVehicleStatusLabel(vehicle.status)}
                       </span>
                     </td>
                     <td style={{ padding: "0.75rem" }}>${vehicle.daily_rate}</td>

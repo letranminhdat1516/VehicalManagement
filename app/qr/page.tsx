@@ -30,24 +30,28 @@ export default function QRPage() {
           gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
           gap: "1rem",
         }}>
-          {vehicles
-            .filter((v) => ALLOWED_QR_CODES.includes(v.code))
-            .map((v) => {
-            const qrValue = `${origin}/rentals?vehicle=${encodeURIComponent(v.code)}`;
+          {ALLOWED_QR_CODES.map((code) => {
+            const matched = vehicles.find((v) => v.code === code);
+            const qrValue = `${origin}/rentals?vehicle=${encodeURIComponent(code)}`;
             return (
-              <div key={v.id} style={{
+              <div key={code} style={{
                 background: "white",
                 border: "1px solid #e5e7eb",
                 borderRadius: "0.5rem",
                 padding: "1rem",
               }}>
                 <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
-                  {v.code} - {v.brand} {v.model}
+                  {code} - {matched ? `${matched.brand} ${matched.model}` : "Chưa gán xe"}
                 </div>
                 <QRCodeCanvas value={qrValue} size={180} />
                 <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#6b7280" }}>
                   Quét QR để mở form thuê xe
                 </div>
+                {!matched && (
+                  <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#dc2626" }}>
+                    Mã này chưa tồn tại trong danh sách xe
+                  </div>
+                )}
               </div>
             );
           })}

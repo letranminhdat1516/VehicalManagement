@@ -1,10 +1,10 @@
 export const ALLOWED_QR_CODES = [
-  "DEV-01",
-  "DEV-02",
-  "DEV-03",
-  "DEV-04",
-  "DEV-05",
-  "DEV-06",
+  "WC-001",
+  "WC-002",
+  "WC-003",
+  "ST-001",
+  "ST-002",
+  "ST-003",
 ];
 
 export const isAllowedQrCode = (code: string) =>

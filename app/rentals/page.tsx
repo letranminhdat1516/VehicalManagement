@@ -14,6 +14,8 @@ import { ALLOWED_QR_CODES, isAllowedQrCode } from "@/src/lib/allowedQrCodes";
 export default function RentalsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
+  const vehicleCodeParam = searchParams.get("vehicle");
+  const isPublic = !user && !!vehicleCodeParam;
   const { rentals, loading, createRental, completeRental, cancelRental } =
     useRentals(user?.role || "GUARD", user?.branch_id || null);
   const { vehicles } = useVehicles(user?.role || "GUARD", user?.branch_id || null);
@@ -22,6 +24,45 @@ export default function RentalsPage() {
   const [showScanRent, setShowScanRent] = useState(false);
   const [showScanReturn, setShowScanReturn] = useState(false);
   const [cccdFile, setCccdFile] = useState<File | null>(null);
+  const [publicSubmitting, setPublicSubmitting] = useState(false);
+  const [publicSubmitted, setPublicSubmitted] = useState(false);
+  const [publicReceipt, setPublicReceipt] = useState<{
+    vehicleCode: string;
+    customerName: string;
+    customerPhone: string;
+    notes: string;
+    cccdFileName: string;
+    submittedAt: string;
+  } | null>(null);
+
+  const formatDate = (value?: string | Date | null) => {
+    if (!value) return "-";
+    const d = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString();
+  };
+
+  const pickDate = (rental: Rental, keys: string[]) => {
+    const data = rental as Record<string, any>;
+    for (const key of keys) {
+      if (data?.[key]) return data[key];
+    }
+    return null;
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "ACTIVE":
+        return "Đang Thuê";
+      case "COMPLETED":
+        return "Hoàn Tất";
+      case "CANCELLED":
+        return "Đã Hủy";
+      case "PENDING":
+        return "Chờ Xác Nhận";
+      default:
+        return status;
+    }
+  };
   const [formData, setFormData] = useState({
     vehicle_id: "",
     customer_name: "",
@@ -37,6 +78,7 @@ export default function RentalsPage() {
   );
 
   useEffect(() => {
+    if (!user) return;
     const vehicleCode = searchParams.get("vehicle");
     if (!vehicleCode || !vehicles.length) return;
 
@@ -51,18 +93,91 @@ export default function RentalsPage() {
 
   const uploadCccd = async (file: File) => {
     const fileExt = file.name.split(".").pop() || "jpg";
-    const filePath = `cccd/${user?.id || "anonymous"}/${Date.now()}.${fileExt}`;
+    const fileName = `${Date.now()}.${fileExt}`;
 
-    const { error } = await supabase.storage
-      .from("citizen-ids")
-      .upload(filePath, file, { upsert: true });
+    const res = await fetch("/api/public-cccd-upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName,
+        contentType: file.type || "image/jpeg",
+      }),
+    });
 
-    if (error) {
-      throw new Error(error.message);
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data?.error || "Không thể tạo link upload");
     }
 
-    const { data } = supabase.storage.from("citizen-ids").getPublicUrl(filePath);
-    return data.publicUrl;
+    const uploadRes = await fetch(data.signedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "image/jpeg" },
+      body: file,
+    });
+
+    if (!uploadRes.ok) {
+      throw new Error("Upload CCCD thất bại");
+    }
+
+    return data.publicUrl as string;
+  };
+
+  const handlePublicSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const vehicleCode = vehicleCodeParam?.trim() || "";
+    if (!vehicleCode || !isAllowedQrCode(vehicleCode)) {
+      alert("Mã xe không hợp lệ. Chỉ cho phép 6 mã cố định.");
+      return;
+    }
+
+    let cccdUrl: string | null = null;
+    if (cccdFile) {
+      try {
+        cccdUrl = await uploadCccd(cccdFile);
+      } catch (err: any) {
+        alert(`Lỗi upload CCCD: ${err?.message || "Không thể tải lên"}`);
+        return;
+      }
+    }
+
+    const notesWithCccd = `${formData.notes ? formData.notes + "\n" : ""}CCCD: ${cccdUrl}`;
+
+    setPublicSubmitting(true);
+    try {
+      const response = await fetch("/api/public-rentals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          vehicle_code: vehicleCode,
+          customer_name: formData.customer_name,
+          customer_phone: formData.customer_phone,
+          start_date: formData.start_date,
+          notes: notesWithCccd,
+          cccd_url: cccdUrl,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        alert(result?.error || "Không thể tạo đơn thuê");
+        return;
+      }
+
+      setPublicReceipt({
+        vehicleCode,
+        customerName: formData.customer_name,
+        customerPhone: formData.customer_phone,
+        notes: formData.notes || "-",
+        cccdFileName: cccdFile?.name || "Ảnh CCCD",
+        submittedAt: new Date().toLocaleString(),
+      });
+      setPublicSubmitted(true);
+    } catch (err: any) {
+      alert(err?.message || "Không thể gửi yêu cầu");
+    } finally {
+      setPublicSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -126,15 +241,10 @@ export default function RentalsPage() {
   };
 
   const handleComplete = async (rental: Rental) => {
-    const days = prompt("Nhập số ngày thuê:");
-    if (!days) return;
-
-    const totalAmount = parseFloat(days) * rental.daily_rate;
-    const confirmed = confirm(`Tổng tiền: ${totalAmount.toLocaleString()} VNĐ. Hoàn tất đơn thuê?`);
-    
+    const confirmed = confirm("Xác nhận trả xe?");
     if (!confirmed) return;
 
-    const result = await completeRental(rental.id, totalAmount);
+    const result = await completeRental(rental.id, 0);
     if (result.success) {
       alert("Đã hoàn tất đơn thuê thành công!");
     } else {
@@ -189,94 +299,36 @@ export default function RentalsPage() {
     handleComplete(rental);
   };
 
-  if (!user) return null;
+  if (!user && !isPublic) return null;
 
   return (
-    <DashboardLayout>
-      <div>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.5rem",
-        }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Đơn Thuê</h1>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <a
-              href="/qr"
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: "#111827",
-                color: "white",
-                borderRadius: "0.375rem",
-                textDecoration: "none",
-                fontWeight: "500",
-              }}
-            >
-              Xem QR xe
-            </a>
-            <button
-              onClick={() => setShowScanReturn(true)}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: "#10b981",
-                color: "white",
-                border: "none",
-                borderRadius: "0.375rem",
-                cursor: "pointer",
-                fontWeight: "500",
-              }}
-            >
-              Quét QR trả xe
-            </button>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: "0.375rem",
-                cursor: "pointer",
-                fontWeight: "500",
-              }}
-            >
-              {showForm ? "Hủy" : "Thuê Mới"}
-            </button>
-          </div>
-        </div>
-
-        {showScanRent && (
-          <QRScanner
-            title="Quét QR để chọn xe"
-            onScan={handleScanRent}
-            onClose={() => setShowScanRent(false)}
-          />
-        )}
-
-        {showScanReturn && (
-          <QRScanner
-            title="Quét QR để xác nhận trả xe"
-            onScan={handleScanReturn}
-            onClose={() => setShowScanReturn(false)}
-          />
-        )}
-
-        {showForm && (
+    <div>
+      {user ? (
+        <DashboardLayout>
+          <div>
           <div style={{
-            padding: "1.5rem",
-            background: "white",
-            borderRadius: "0.5rem",
-            border: "1px solid #e5e7eb",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: "1.5rem",
           }}>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
-              Tạo Đơn Thuê Mới
-            </h2>
-            <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
+            <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Đơn Thuê</h1>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <a
+                href="/qr"
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  background: "#111827",
+                  color: "white",
+                  borderRadius: "0.375rem",
+                  textDecoration: "none",
+                  fontWeight: "500",
+                }}
+              >
+                Xem QR xe
+              </a>
               <button
-                type="button"
-                onClick={() => setShowScanRent(true)}
+                onClick={() => setShowScanReturn(true)}
                 style={{
                   padding: "0.75rem 1.5rem",
                   background: "#10b981",
@@ -287,25 +339,90 @@ export default function RentalsPage() {
                   fontWeight: "500",
                 }}
               >
-                Quét QR chọn xe
+                Quét QR trả xe
               </button>
-              <select
-                value={formData.vehicle_id}
-                onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
-                required
+              <button
+                onClick={() => setShowForm(!showForm)}
                 style={{
-                  padding: "0.5rem",
-                  border: "1px solid #d1d5db",
+                  padding: "0.75rem 1.5rem",
+                  background: "#3b82f6",
+                  color: "white",
+                  border: "none",
                   borderRadius: "0.375rem",
+                  cursor: "pointer",
+                  fontWeight: "500",
                 }}
               >
-                <option value="">Chọn phương tiện</option>
-                {availableVehicles.map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.code} - {vehicle.brand} {vehicle.model} ({vehicle.daily_rate?.toLocaleString() || '0'} VNĐ/ngày)
-                  </option>
-                ))}
-              </select>
+                {showForm ? "Hủy" : "Thuê Mới"}
+              </button>
+            </div>
+          </div>
+
+          {showScanRent && (
+            <QRScanner
+              title="Quét QR để chọn xe"
+              onScan={handleScanRent}
+              onClose={() => setShowScanRent(false)}
+            />
+          )}
+
+          {showScanReturn && (
+            <QRScanner
+              title="Quét QR để xác nhận trả xe"
+              onScan={handleScanReturn}
+              onClose={() => setShowScanReturn(false)}
+            />
+          )}
+
+          {showForm && (
+            <div style={{
+              padding: "1.5rem",
+              background: "white",
+              borderRadius: "0.5rem",
+              border: "1px solid #e5e7eb",
+              marginBottom: "1.5rem",
+            }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
+                Tạo Đơn Thuê Mới
+              </h2>
+              <form
+                onSubmit={isPublic ? handlePublicSubmit : handleSubmit}
+                style={{ display: "grid", gap: "1rem" }}
+              >
+                {!isPublic && (
+                  <button
+                    type="button"
+                    onClick={() => setShowScanRent(true)}
+                    style={{
+                      padding: "0.75rem 1.5rem",
+                      background: "#10b981",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "0.375rem",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Quét QR chọn xe
+                  </button>
+                )}
+                <select
+                  value={formData.vehicle_id}
+                  onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
+                  required
+                  style={{
+                    padding: "0.5rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.375rem",
+                  }}
+                >
+                  <option value="">Chọn phương tiện</option>
+                  {availableVehicles.map((vehicle) => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {vehicle.code} - {vehicle.brand} {vehicle.model} ({vehicle.daily_rate?.toLocaleString() || "0"} VNĐ/ngày)
+                    </option>
+                  ))}
+                </select>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                 <input
@@ -384,139 +501,289 @@ export default function RentalsPage() {
                 }}
               />
 
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  type="submit"
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    background: "#10b981",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "0.375rem",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                >
-                  Tạo Đơn Thuê
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    background: "#6b7280",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "0.375rem",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                >
-                  Hủy
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    type="submit"
+                    disabled={publicSubmitting}
+                    style={{
+                      padding: "0.75rem 1.5rem",
+                      background: "#10b981",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "0.375rem",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                      opacity: publicSubmitting ? 0.7 : 1,
+                    }}
+                  >
+                    {publicSubmitting ? "Đang gửi..." : "Tạo Đơn Thuê"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    style={{
+                      padding: "0.75rem 1.5rem",
+                      background: "#6b7280",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "0.375rem",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
-        {loading ? (
-          <div>Đang tải đơn thuê...</div>
-        ) : (
+          {loading ? (
+            <div>Đang tải đơn thuê...</div>
+          ) : (
+            <div style={{
+              background: "white",
+              borderRadius: "0.5rem",
+              border: "1px solid #e5e7eb",
+              overflow: "auto",
+            }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Khách hàng</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Điện thoại</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mã xe</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày bắt đầu</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày kết thúc</th>
+                    
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Trạng thái</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành động</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rentals.map((rental) => (
+                    <tr key={rental.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                      <td style={{ padding: "0.75rem" }}>{rental.customer_name}</td>
+                      <td style={{ padding: "0.75rem" }}>{rental.customer_phone}</td>
+                      <td style={{ padding: "0.75rem", fontSize: "0.75rem" }}>
+                        {String(rental.vehicle_id).substring(0, 8)}...
+                      </td>
+                      <td style={{ padding: "0.75rem" }}>
+                        {formatDate(
+                          pickDate(rental, ["start_date", "start_at", "start_time", "created_at"])
+                        )}
+                      </td>
+                      <td style={{ padding: "0.75rem" }}>
+                        {formatDate(
+                          pickDate(rental, ["end_date", "end_at", "end_time", "returned_at", "completed_at"])
+                        )}
+                      </td>
+                      <td style={{ padding: "0.75rem" }}>
+                        <span style={{
+                          padding: "0.25rem 0.75rem",
+                          borderRadius: "9999px",
+                          fontSize: "0.75rem",
+                          fontWeight: "500",
+                          background: rental.status === "ACTIVE" ? "#dbeafe" :
+                                     rental.status === "COMPLETED" ? "#d1fae5" : "#fecaca",
+                          color: rental.status === "ACTIVE" ? "#1e40af" :
+                                 rental.status === "COMPLETED" ? "#065f46" : "#991b1b",
+                        }}>
+                          {getStatusLabel(rental.status)}
+                        </span>
+                      </td>
+                      <td style={{ padding: "0.75rem" }}>
+                        <div style={{ display: "flex", gap: "0.5rem" }}>
+                          {rental.status !== "COMPLETED" && rental.status !== "CANCELLED" && (
+                            <>
+                              <button
+                                onClick={() => handleComplete(rental)}
+                                style={{
+                                  padding: "0.25rem 0.75rem",
+                                  background: "#10b981",
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: "0.25rem",
+                                  cursor: "pointer",
+                                  fontSize: "0.75rem",
+                                }}
+                              >
+                                Trả Xe
+                              </button>
+                              <button
+                                onClick={() => handleCancel(rental.id)}
+                                style={{
+                                  padding: "0.25rem 0.75rem",
+                                  background: "#ef4444",
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: "0.25rem",
+                                  cursor: "pointer",
+                                  fontSize: "0.75rem",
+                                }}
+                              >
+                                Hủy
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          </div>
+        </DashboardLayout>
+      ) : (
+        <div style={{ maxWidth: 720, margin: "2rem auto", padding: "0 1rem" }}>
+          <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.5rem" }}>
+            Phiếu Mượn Xe
+          </h1>
+          <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
+            Vui lòng điền thông tin để mượn xe. Sau khi gửi, hãy đưa cho bảo vệ xác nhận.
+          </p>
           <div style={{
+            padding: "1.5rem",
             background: "white",
             borderRadius: "0.5rem",
             border: "1px solid #e5e7eb",
-            overflow: "auto",
+            marginBottom: "1.5rem",
           }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Khách hàng</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Điện thoại</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mã xe</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày bắt đầu</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày kết thúc</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Giá/Ngày</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Tổng</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Trạng thái</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành động</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rentals.map((rental) => (
-                  <tr key={rental.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={{ padding: "0.75rem" }}>{rental.customer_name}</td>
-                    <td style={{ padding: "0.75rem" }}>{rental.customer_phone}</td>
-                    <td style={{ padding: "0.75rem", fontSize: "0.75rem" }}>
-                      {rental.vehicle_id.substring(0, 8)}...
-                    </td>
-                    <td style={{ padding: "0.75rem" }}>
-                      {new Date(rental.start_date).toLocaleDateString()}
-                    </td>
-                    <td style={{ padding: "0.75rem" }}>
-                      {rental.end_date ? new Date(rental.end_date).toLocaleDateString() : "-"}
-                    </td>
-                    <td style={{ padding: "0.75rem" }}>{rental.daily_rate.toLocaleString()} VNĐ</td>
-                    <td style={{ padding: "0.75rem" }}>
-                      {rental.total_amount ? `${rental.total_amount.toLocaleString()} VNĐ` : "-"}
-                    </td>
-                    <td style={{ padding: "0.75rem" }}>
-                      <span style={{
-                        padding: "0.25rem 0.75rem",
-                        borderRadius: "9999px",
-                        fontSize: "0.75rem",
+            {publicSubmitted ? (
+              <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
+                <div style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.75rem" }}>
+                  Gửi yêu cầu thành công
+                </div>
+                <div style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
+                  Vui lòng đưa điện thoại cho bảo vệ để xác nhận.
+                </div>
+                {publicReceipt && (
+                  <div style={{
+                    textAlign: "left",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "0.5rem",
+                    padding: "1rem",
+                    marginBottom: "1.5rem",
+                    background: "#f9fafb",
+                    fontSize: "0.95rem",
+                  }}>
+                    <div><strong>Mã xe:</strong> {publicReceipt.vehicleCode}</div>
+                    <div><strong>Khách hàng:</strong> {publicReceipt.customerName}</div>
+                    <div><strong>Số điện thoại:</strong> {publicReceipt.customerPhone}</div>
+                    <div><strong>Ghi chú:</strong> {publicReceipt.notes}</div>
+                    <div><strong>Ảnh CCCD:</strong> {publicReceipt.cccdFileName}</div>
+                    <div><strong>Thời gian:</strong> {publicReceipt.submittedAt}</div>
+                  </div>
+                )}
+                <div style={{
+                  display: "inline-block",
+                  padding: "0.5rem 1rem",
+                  background: "#d1fae5",
+                  color: "#065f46",
+                  borderRadius: "9999px",
+                  fontWeight: "600",
+                }}>
+                  Chờ xác nhận
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
+                  Tạo Đơn Thuê Mới
+                </h2>
+                <form
+                  onSubmit={handlePublicSubmit}
+                  style={{ display: "grid", gap: "1rem" }}
+                >
+                  <div style={{
+                    padding: "0.75rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.375rem",
+                    background: "#f9fafb",
+                    fontWeight: "500",
+                  }}>
+                    Mã xe: {vehicleCodeParam}
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <input
+                      type="text"
+                      placeholder="Tên khách hàng"
+                      value={formData.customer_name}
+                      onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                      required
+                      style={{
+                        padding: "0.5rem",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "0.375rem",
+                      }}
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Số điện thoại"
+                      value={formData.customer_phone}
+                      onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+                      required
+                      style={{
+                        padding: "0.5rem",
+                        border: "1px solid #d1d5db",
+                        borderRadius: "0.375rem",
+                      }}
+                    />
+                  </div>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => setCccdFile(e.target.files?.[0] || null)}
+                    required
+                    style={{
+                      padding: "0.5rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "0.375rem",
+                    }}
+                  />
+
+                  <textarea
+                    placeholder="Ghi chú (Tùy chọn)"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={3}
+                    style={{
+                      padding: "0.5rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "0.375rem",
+                      resize: "vertical",
+                    }}
+                  />
+
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button
+                      type="submit"
+                      disabled={publicSubmitting}
+                      style={{
+                        padding: "0.75rem 1.5rem",
+                        background: "#10b981",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "0.375rem",
+                        cursor: "pointer",
                         fontWeight: "500",
-                        background: rental.status === "ACTIVE" ? "#dbeafe" :
-                                   rental.status === "COMPLETED" ? "#d1fae5" : "#fecaca",
-                        color: rental.status === "ACTIVE" ? "#1e40af" :
-                               rental.status === "COMPLETED" ? "#065f46" : "#991b1b",
-                      }}>
-                        {rental.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: "0.75rem" }}>
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
-                        {rental.status === "ACTIVE" && (
-                          <>
-                            <button
-                              onClick={() => handleComplete(rental)}
-                              style={{
-                                padding: "0.25rem 0.75rem",
-                                background: "#10b981",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "0.25rem",
-                                cursor: "pointer",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              Hoàn Tất
-                            </button>
-                            <button
-                              onClick={() => handleCancel(rental.id)}
-                              style={{
-                                padding: "0.25rem 0.75rem",
-                                background: "#ef4444",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "0.25rem",
-                                cursor: "pointer",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              Hủy
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        opacity: publicSubmitting ? 0.7 : 1,
+                      }}
+                    >
+                      {publicSubmitting ? "Đang gửi..." : "Gửi yêu cầu"}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
-        )}
-      </div>
-    </DashboardLayout>
+        </div>
+      )}
+    </div>
   );
 }

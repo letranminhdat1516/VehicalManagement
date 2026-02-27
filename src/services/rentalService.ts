@@ -96,20 +96,36 @@ export const rentalService = {
 
       const rental = rentalResponse.data;
 
-      // Update rental status
-      const { data, error } = await supabase
-        .from("rentals")
-        .update({
-          status: "COMPLETED",
-          end_date: new Date().toISOString(),
-          total_amount: totalAmount,
-        })
-        .eq("id", id)
-        .select()
-        .single();
+      const completedAt = new Date().toISOString();
+      const payloads = [
+        { status: "COMPLETED", end_date: completedAt, total_amount: totalAmount },
+        { status: "COMPLETED", returned_at: completedAt, total_amount: totalAmount },
+        { status: "COMPLETED", completed_at: completedAt, total_amount: totalAmount },
+        { status: "COMPLETED" },
+      ];
 
-      if (error) {
-        return { data: null, error: error.message };
+      let data: Rental | null = null;
+      let error: { message: string } | null = null;
+
+      for (const payload of payloads) {
+        const result = await supabase
+          .from("rentals")
+          .update(payload)
+          .eq("id", id)
+          .select()
+          .single();
+
+        if (!result.error) {
+          data = result.data as Rental;
+          error = null;
+          break;
+        }
+
+        error = result.error;
+      }
+
+      if (error || !data) {
+        return { data: null, error: error?.message || "Update failed" };
       }
 
       // Update vehicle status to AVAILABLE
