@@ -53,10 +53,18 @@ export default function QRScanner({ title, onScan, onClose }: QRScannerProps) {
 
     return () => {
       stopped = true;
-      if (qr?.isScanning) {
-        qr.stop().catch(() => {});
-      }
-      qr?.clear?.();
+      if (!qr) return;
+      const cleanup = async () => {
+        try {
+          if (qr.isScanning) {
+            await qr.stop();
+          }
+        } catch {}
+        try {
+          qr.clear?.();
+        } catch {}
+      };
+      cleanup();
     };
   }, [onScan]);
 

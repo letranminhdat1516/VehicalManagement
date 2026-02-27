@@ -6,11 +6,14 @@ import { useVehicles } from "@/src/hooks/useVehicles";
 import DashboardLayout from "@/src/components/DashboardLayout";
 import QRScanner from "@/src/components/QRScanner";
 import { supabase } from "@/src/lib/supabaseClient";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Rental, RentalStatus } from "@/src/types";
+import { ALLOWED_QR_CODES, isAllowedQrCode } from "@/src/lib/allowedQrCodes";
 
 export default function RentalsPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const { rentals, loading, createRental, completeRental, cancelRental } =
     useRentals(user?.role || "GUARD", user?.branch_id || null);
   const { vehicles } = useVehicles(user?.role || "GUARD", user?.branch_id || null);
@@ -29,21 +32,36 @@ export default function RentalsPage() {
     notes: "",
   });
 
-  const availableVehicles = vehicles.filter((v) => v.status === "AVAILABLE");
+  const availableVehicles = vehicles.filter(
+    (v) => v.status === "AVAILABLE" && ALLOWED_QR_CODES.includes(v.code)
+  );
+
+  useEffect(() => {
+    const vehicleCode = searchParams.get("vehicle");
+    if (!vehicleCode || !vehicles.length) return;
+
+    const matched = vehicles.find(
+      (v) => v.code === vehicleCode && ALLOWED_QR_CODES.includes(v.code)
+    );
+    if (!matched) return;
+
+    setFormData((prev) => ({ ...prev, vehicle_id: matched.id }));
+    setShowForm(true);
+  }, [searchParams, vehicles]);
 
   const uploadCccd = async (file: File) => {
     const fileExt = file.name.split(".").pop() || "jpg";
     const filePath = `cccd/${user?.id || "anonymous"}/${Date.now()}.${fileExt}`;
 
     const { error } = await supabase.storage
-      .from("cccd")
+      .from("citizen-ids")
       .upload(filePath, file, { upsert: true });
 
     if (error) {
       throw new Error(error.message);
     }
 
-    const { data } = supabase.storage.from("cccd").getPublicUrl(filePath);
+    const { data } = supabase.storage.from("citizen-ids").getPublicUrl(filePath);
     return data.publicUrl;
   };
 
@@ -53,6 +71,11 @@ export default function RentalsPage() {
     const selectedVehicle = vehicles.find((v) => v.id === formData.vehicle_id);
     if (!selectedVehicle) {
       alert("Vui lòng chọn phương tiện");
+      return;
+    }
+
+    if (!isAllowedQrCode(selectedVehicle.code)) {
+      alert("Mã xe không hợp lệ. Chỉ cho phép 6 mã cố định.");
       return;
     }
 
@@ -132,7 +155,9 @@ export default function RentalsPage() {
 
   const handleScanRent = (value: string) => {
     const code = value.trim();
-    const matched = vehicles.find((v) => v.code === code || v.id === code);
+    const matched = vehicles.find(
+      (v) => (v.code === code || v.id === code) && ALLOWED_QR_CODES.includes(v.code)
+    );
     if (!matched) {
       alert("Không tìm thấy phương tiện từ mã QR");
       return;
@@ -143,7 +168,9 @@ export default function RentalsPage() {
 
   const handleScanReturn = (value: string) => {
     const code = value.trim();
-    const matched = vehicles.find((v) => v.code === code || v.id === code);
+    const matched = vehicles.find(
+      (v) => (v.code === code || v.id === code) && ALLOWED_QR_CODES.includes(v.code)
+    );
     if (!matched) {
       alert("Không tìm thấy phương tiện từ mã QR");
       return;
@@ -175,6 +202,19 @@ export default function RentalsPage() {
         }}>
           <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Đơn Thuê</h1>
           <div style={{ display: "flex", gap: "0.5rem" }}>
+            <a
+              href="/qr"
+              style={{
+                padding: "0.75rem 1.5rem",
+                background: "#111827",
+                color: "white",
+                borderRadius: "0.375rem",
+                textDecoration: "none",
+                fontWeight: "500",
+              }}
+            >
+              Xem QR xe
+            </a>
             <button
               onClick={() => setShowScanReturn(true)}
               style={{
