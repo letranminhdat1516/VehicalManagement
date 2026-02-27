@@ -49,14 +49,13 @@ export const vehicleService = {
       const { data, error } = await supabase
         .from("vehicles")
         .insert([vehicle])
-        .select()
-        .single();
+        .select();
 
       if (error) {
         return { data: null, error: error.message };
       }
 
-      return { data: data as Vehicle, error: null };
+      return { data: (data && data[0]) as Vehicle, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
@@ -68,14 +67,13 @@ export const vehicleService = {
         .from("vehicles")
         .update(updates)
         .eq("id", id)
-        .select()
-        .single();
+        .select();
 
       if (error) {
         return { data: null, error: error.message };
       }
 
-      return { data: data as Vehicle, error: null };
+      return { data: (data && data[0]) as Vehicle, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
@@ -102,6 +100,20 @@ export const vehicleService = {
     id: string,
     status: Vehicle["status"]
   ): Promise<ApiResponse<Vehicle>> {
-    return this.updateVehicle(id, { status });
+    try {
+      const { data, error } = await supabase
+        .from("vehicles")
+        .update({ status })
+        .eq("id", id)
+        .select();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data: (data && data[0]) as Vehicle, error: null };
+    } catch (error: any) {
+      return { data: null, error: error.message };
+    }
   },
 };

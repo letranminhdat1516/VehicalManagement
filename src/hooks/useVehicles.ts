@@ -10,6 +10,7 @@ export function useVehicles(userRole: UserRole, branchId: string | null) {
   const [error, setError] = useState<string | null>(null);
 
   const loadVehicles = useCallback(async () => {
+    console.log("Loading vehicles...");
     setLoading(true);
     const response = await vehicleService.getVehicles(userRole, branchId);
     
@@ -17,6 +18,7 @@ export function useVehicles(userRole: UserRole, branchId: string | null) {
       setError(response.error);
       setVehicles([]);
     } else {
+      console.log("Vehicles loaded:", response.data);
       setVehicles(response.data);
       setError(null);
     }

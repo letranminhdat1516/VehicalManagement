@@ -1,7 +1,7 @@
 // Database Types
 export type UserRole = "ADMIN" | "GUARD" | "USER";
 export type VehicleStatus = "AVAILABLE" | "RENTED" | "MAINTENANCE";
-export type VehicleType = "CAR" | "MOTORCYCLE" | "TRUCK" | "VAN";
+export type VehicleType = "CAR" | "MOTORCYCLE" | "TRUCK" | "VAN" | "WHEELCHAIR" | "STROLLER";
 export type RentalStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
 
 export interface AppUser {

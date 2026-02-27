@@ -53,12 +53,17 @@ export default function RentalsPage() {
     switch (status) {
       case "ACTIVE":
         return "Đang Thuê";
-      case "COMPLETED":
-        return "Hoàn Tất";
-      case "CANCELLED":
-        return "Đã Hủy";
       case "PENDING":
         return "Chờ Xác Nhận";
+      case "COMPLETED":
+        return "Hoàn Tất";
+      case "RETURNED":
+      case "DONE":
+      case "FINISHED":
+      case "CLOSED":
+        return "Đã Trả";
+      case "CANCELLED":
+        return "Đã Hủy";
       default:
         return status;
     }

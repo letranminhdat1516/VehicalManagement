@@ -97,17 +97,18 @@ export const rentalService = {
       const rental = rentalResponse.data;
 
       const completedAt = new Date().toISOString();
-      const payloads = [
-        { status: "COMPLETED", end_date: completedAt, total_amount: totalAmount },
-        { status: "COMPLETED", returned_at: completedAt, total_amount: totalAmount },
-        { status: "COMPLETED", completed_at: completedAt, total_amount: totalAmount },
-        { status: "COMPLETED" },
+      const statusCandidates = ["COMPLETED", "RETURNED", "DONE", "FINISHED", "CLOSED"];
+      const basePayloads = [
+        { end_date: completedAt, total_amount: totalAmount },
+        { returned_at: completedAt, total_amount: totalAmount },
+        { completed_at: completedAt, total_amount: totalAmount },
+        {},
       ];
 
       let data: Rental | null = null;
       let error: { message: string } | null = null;
 
-      for (const payload of payloads) {
+      const tryUpdate = async (payload: Record<string, any>) => {
         const result = await supabase
           .from("rentals")
           .update(payload)
@@ -115,13 +116,32 @@ export const rentalService = {
           .select()
           .single();
 
-        if (!result.error) {
-          data = result.data as Rental;
-          error = null;
-          break;
-        }
+        return result;
+      };
 
-        error = result.error;
+      for (const status of statusCandidates) {
+        for (const base of basePayloads) {
+          const result = await tryUpdate({ status, ...base });
+          if (!result.error) {
+            data = result.data as Rental;
+            error = null;
+            break;
+          }
+          error = result.error;
+        }
+        if (data) break;
+      }
+
+      if (!data) {
+        for (const base of basePayloads) {
+          const result = await tryUpdate(base);
+          if (!result.error) {
+            data = result.data as Rental;
+            error = null;
+            break;
+          }
+          error = result.error;
+        }
       }
 
       if (error || !data) {

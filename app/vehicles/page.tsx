@@ -12,71 +12,33 @@ export default function VehiclesPage() {
     useVehicles(user?.role || "GUARD", user?.branch_id || null);
 
   const [showForm, setShowForm] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [formData, setFormData] = useState({
     code: "",
-    type: "CAR" as VehicleType,
-    brand: "",
-    model: "",
-    year: new Date().getFullYear(),
-    plate_number: "",
+    type: "WHEELCHAIR" as VehicleType,
     status: "AVAILABLE" as VehicleStatus,
     branch_id: user?.branch_id || "",
-    daily_rate: 0,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (editingVehicle) {
-      const result = await updateVehicle(editingVehicle.id, formData);
-      if (result.success) {
-        alert("Đã cập nhật phương tiện thành công!");
-        resetForm();
-      } else {
-        alert(`Lỗi: ${result.error}`);
-      }
+    const result = await createVehicle(formData);
+    if (result.success) {
+      alert("Đã tạo phương tiện thành công!");
+      resetForm();
     } else {
-      const result = await createVehicle(formData);
-      if (result.success) {
-        alert("Đã tạo phương tiện thành công!");
-        resetForm();
-      } else {
-        alert(`Lỗi: ${result.error}`);
-      }
+      alert(`Lỗi: ${result.error}`);
     }
   };
 
   const resetForm = () => {
     setFormData({
       code: "",
-      type: "CAR",
-      brand: "",
-      model: "",
-      year: new Date().getFullYear(),
-      plate_number: "",
+      type: "WHEELCHAIR",
       status: "AVAILABLE",
       branch_id: user?.branch_id || "",
-      daily_rate: 0,
     });
-    setEditingVehicle(null);
     setShowForm(false);
-  };
-
-  const handleEdit = (vehicle: Vehicle) => {
-    setEditingVehicle(vehicle);
-    setFormData({
-      code: vehicle.code,
-      type: vehicle.type,
-      brand: vehicle.brand || "",
-      model: vehicle.model || "",
-      year: vehicle.year || new Date().getFullYear(),
-      plate_number: vehicle.plate_number || "",
-      status: vehicle.status,
-      branch_id: vehicle.branch_id,
-      daily_rate: vehicle.daily_rate,
-    });
-    setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -91,7 +53,9 @@ export default function VehiclesPage() {
   };
 
   const handleStatusChange = async (id: string, status: VehicleStatus) => {
+    console.log("Updating vehicle status:", id, status);
     const result = await updateVehicleStatus(id, status);
+    console.log("Update result:", result);
     if (result.success) {
       alert("Đã cập nhật trạng thái thành công!");
     } else {
@@ -151,7 +115,7 @@ export default function VehiclesPage() {
             marginBottom: "1.5rem",
           }}>
             <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
-              {editingVehicle ? "Chỉnh Sửa Phương Tiện" : "Tạo Phương Tiện Mới"}
+              Tạo Phương Tiện Mới
             </h2>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
@@ -176,88 +140,8 @@ export default function VehiclesPage() {
                     borderRadius: "0.375rem",
                   }}
                 >
-                  <option value="CAR">Ô tô</option>
-                  <option value="MOTORCYCLE">Xe máy</option>
-                  <option value="TRUCK">Xe tải</option>
-                  <option value="VAN">Xe van</option>
-                </select>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <input
-                  type="text"
-                  placeholder="Hãng xe"
-                  value={formData.brand}
-                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                  style={{
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                  }}
-                />
-                <input
-                  type="text"
-                  placeholder="Mẫu xe"
-                  value={formData.model}
-                  onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                  style={{
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                  }}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <input
-                  type="number"
-                  placeholder="Năm sản xuất"
-                  value={formData.year}
-                  onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                  style={{
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                  }}
-                />
-                <input
-                  type="text"
-                  placeholder="Biển số xe"
-                  value={formData.plate_number}
-                  onChange={(e) => setFormData({ ...formData, plate_number: e.target.value })}
-                  style={{
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                  }}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <input
-                  type="number"
-                  placeholder="Giá thuê/ngày"
-                  value={formData.daily_rate}
-                  onChange={(e) => setFormData({ ...formData, daily_rate: parseFloat(e.target.value) })}
-                  required
-                  style={{
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                  }}
-                />
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as VehicleStatus })}
-                  style={{
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                  }}
-                >
-                  <option value="AVAILABLE">Sẵn sàng</option>
-                  <option value="RENTED">Đang thuê</option>
-                  <option value="MAINTENANCE">Bảo trì</option>
+                  <option value="WHEELCHAIR">Xe lăn</option>
+                  <option value="STROLLER">Xe đẩy</option>
                 </select>
               </div>
 
@@ -274,7 +158,7 @@ export default function VehiclesPage() {
                     fontWeight: "500",
                   }}
                 >
-                  {editingVehicle ? "Cập Nhật" : "Tạo Mới"}
+                  Tạo Mới
                 </button>
                 <button
                   type="button"
@@ -310,11 +194,7 @@ export default function VehiclesPage() {
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mã</th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Loại</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hãng</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mẫu</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Biển số</th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Trạng thái</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Giá/Ngày</th>
                   <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành động</th>
                 </tr>
               </thead>
@@ -323,9 +203,6 @@ export default function VehiclesPage() {
                   <tr key={vehicle.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={{ padding: "0.75rem" }}>{vehicle.code}</td>
                     <td style={{ padding: "0.75rem" }}>{vehicle.type}</td>
-                    <td style={{ padding: "0.75rem" }}>{vehicle.brand}</td>
-                    <td style={{ padding: "0.75rem" }}>{vehicle.model}</td>
-                    <td style={{ padding: "0.75rem" }}>{vehicle.plate_number}</td>
                     <td style={{ padding: "0.75rem" }}>
                       <span style={{
                         padding: "0.25rem 0.75rem",
@@ -340,40 +217,23 @@ export default function VehiclesPage() {
                         {getVehicleStatusLabel(vehicle.status)}
                       </span>
                     </td>
-                    <td style={{ padding: "0.75rem" }}>${vehicle.daily_rate}</td>
                     <td style={{ padding: "0.75rem" }}>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
                         {user.role === "ADMIN" && (
-                          <>
-                            <button
-                              onClick={() => handleEdit(vehicle)}
-                              style={{
-                                padding: "0.25rem 0.75rem",
-                                background: "#3b82f6",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "0.25rem",
-                                cursor: "pointer",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              onClick={() => handleDelete(vehicle.id)}
-                              style={{
-                                padding: "0.25rem 0.75rem",
-                                background: "#ef4444",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "0.25rem",
-                                cursor: "pointer",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              Xóa
-                            </button>
-                          </>
+                          <button
+                            onClick={() => handleDelete(vehicle.id)}
+                            style={{
+                              padding: "0.25rem 0.75rem",
+                              background: "#ef4444",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "0.25rem",
+                              cursor: "pointer",
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            Xóa
+                          </button>
                         )}
                         {vehicle.status === "AVAILABLE" && (
                           <button
