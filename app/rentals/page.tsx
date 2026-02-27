@@ -4,6 +4,8 @@ import { useAuth } from "@/src/hooks/useAuth";
 import { useRentals } from "@/src/hooks/useRentals";
 import { useVehicles } from "@/src/hooks/useVehicles";
 import DashboardLayout from "@/src/components/DashboardLayout";
+import QRScanner from "@/src/components/QRScanner";
+import { supabase } from "@/src/lib/supabaseClient";
 import { useState } from "react";
 import { Rental, RentalStatus } from "@/src/types";
 
@@ -14,6 +16,9 @@ export default function RentalsPage() {
   const { vehicles } = useVehicles(user?.role || "GUARD", user?.branch_id || null);
 
   const [showForm, setShowForm] = useState(false);
+  const [showScanRent, setShowScanRent] = useState(false);
+  const [showScanReturn, setShowScanReturn] = useState(false);
+  const [cccdFile, setCccdFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     vehicle_id: "",
     customer_name: "",
@@ -26,6 +31,22 @@ export default function RentalsPage() {
 
   const availableVehicles = vehicles.filter((v) => v.status === "AVAILABLE");
 
+  const uploadCccd = async (file: File) => {
+    const fileExt = file.name.split(".").pop() || "jpg";
+    const filePath = `cccd/${user?.id || "anonymous"}/${Date.now()}.${fileExt}`;
+
+    const { error } = await supabase.storage
+      .from("cccd")
+      .upload(filePath, file, { upsert: true });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const { data } = supabase.storage.from("cccd").getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -35,12 +56,28 @@ export default function RentalsPage() {
       return;
     }
 
+    if (!cccdFile) {
+      alert("Vui lòng chụp hoặc tải lên ảnh CCCD");
+      return;
+    }
+
+    let cccdUrl: string | null = null;
+    try {
+      cccdUrl = await uploadCccd(cccdFile);
+    } catch (err: any) {
+      alert(`Lỗi upload CCCD: ${err?.message || "Không thể tải lên"}`);
+      return;
+    }
+
+    const notesWithCccd = `${formData.notes ? formData.notes + "\n" : ""}CCCD: ${cccdUrl}`;
+
     const result = await createRental({
       ...formData,
       guard_id: user?.id || "",
       branch_id: user?.branch_id || selectedVehicle.branch_id,
       daily_rate: selectedVehicle.daily_rate,
       status: "ACTIVE" as RentalStatus,
+      notes: notesWithCccd,
     });
 
     if (result.success) {
@@ -61,6 +98,7 @@ export default function RentalsPage() {
       daily_rate: 0,
       notes: "",
     });
+    setCccdFile(null);
     setShowForm(false);
   };
 
@@ -92,6 +130,38 @@ export default function RentalsPage() {
     }
   };
 
+  const handleScanRent = (value: string) => {
+    const code = value.trim();
+    const matched = vehicles.find((v) => v.code === code || v.id === code);
+    if (!matched) {
+      alert("Không tìm thấy phương tiện từ mã QR");
+      return;
+    }
+    setFormData((prev) => ({ ...prev, vehicle_id: matched.id }));
+    setShowScanRent(false);
+  };
+
+  const handleScanReturn = (value: string) => {
+    const code = value.trim();
+    const matched = vehicles.find((v) => v.code === code || v.id === code);
+    if (!matched) {
+      alert("Không tìm thấy phương tiện từ mã QR");
+      return;
+    }
+
+    const rental = rentals.find(
+      (r) => r.status === "ACTIVE" && r.vehicle_id === matched.id
+    );
+
+    if (!rental) {
+      alert("Không có đơn thuê đang hoạt động cho phương tiện này");
+      return;
+    }
+
+    setShowScanReturn(false);
+    handleComplete(rental);
+  };
+
   if (!user) return null;
 
   return (
@@ -104,21 +174,53 @@ export default function RentalsPage() {
           marginBottom: "1.5rem",
         }}>
           <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Đơn Thuê</h1>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            style={{
-              padding: "0.75rem 1.5rem",
-              background: "#3b82f6",
-              color: "white",
-              border: "none",
-              borderRadius: "0.375rem",
-              cursor: "pointer",
-              fontWeight: "500",
-            }}
-          >
-            {showForm ? "Hủy" : "Thuê Mới"}
-          </button>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button
+              onClick={() => setShowScanReturn(true)}
+              style={{
+                padding: "0.75rem 1.5rem",
+                background: "#10b981",
+                color: "white",
+                border: "none",
+                borderRadius: "0.375rem",
+                cursor: "pointer",
+                fontWeight: "500",
+              }}
+            >
+              Quét QR trả xe
+            </button>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              style={{
+                padding: "0.75rem 1.5rem",
+                background: "#3b82f6",
+                color: "white",
+                border: "none",
+                borderRadius: "0.375rem",
+                cursor: "pointer",
+                fontWeight: "500",
+              }}
+            >
+              {showForm ? "Hủy" : "Thuê Mới"}
+            </button>
+          </div>
         </div>
+
+        {showScanRent && (
+          <QRScanner
+            title="Quét QR để chọn xe"
+            onScan={handleScanRent}
+            onClose={() => setShowScanRent(false)}
+          />
+        )}
+
+        {showScanReturn && (
+          <QRScanner
+            title="Quét QR để xác nhận trả xe"
+            onScan={handleScanReturn}
+            onClose={() => setShowScanReturn(false)}
+          />
+        )}
 
         {showForm && (
           <div style={{
@@ -132,6 +234,21 @@ export default function RentalsPage() {
               Tạo Đơn Thuê Mới
             </h2>
             <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
+              <button
+                type="button"
+                onClick={() => setShowScanRent(true)}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  background: "#10b981",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "0.375rem",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                }}
+              >
+                Quét QR chọn xe
+              </button>
               <select
                 value={formData.vehicle_id}
                 onChange={(e) => setFormData({ ...formData, vehicle_id: e.target.value })}
@@ -145,7 +262,7 @@ export default function RentalsPage() {
                 <option value="">Chọn phương tiện</option>
                 {availableVehicles.map((vehicle) => (
                   <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.code} - {vehicle.brand} {vehicle.model} ({vehicle.daily_rate.toLocaleString()} VNĐ/ngày)
+                    {vehicle.code} - {vehicle.brand} {vehicle.model} ({vehicle.daily_rate?.toLocaleString() || '0'} VNĐ/ngày)
                   </option>
                 ))}
               </select>
@@ -182,6 +299,19 @@ export default function RentalsPage() {
                 placeholder="Số CMND/CCCD (Tùy chọn)"
                 value={formData.customer_id_number}
                 onChange={(e) => setFormData({ ...formData, customer_id_number: e.target.value })}
+                style={{
+                  padding: "0.5rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.375rem",
+                }}
+              />
+
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={(e) => setCccdFile(e.target.files?.[0] || null)}
+                required
                 style={{
                   padding: "0.5rem",
                   border: "1px solid #d1d5db",

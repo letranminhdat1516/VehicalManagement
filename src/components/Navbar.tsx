@@ -18,7 +18,6 @@ export default function Navbar() {
     { href: "/dashboard", label: "Tổng Quan", roles: ["ADMIN", "GUARD"] },
     { href: "/vehicles", label: "Phương Tiện", roles: ["ADMIN", "GUARD"] },
     { href: "/rentals", label: "Đơn Thuê", roles: ["ADMIN", "GUARD"] },
-    { href: "/branches", label: "Chi Nhánh", roles: ["ADMIN"] },
   ];
 
   const filteredNavItems = navItems.filter((item) =>

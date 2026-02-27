@@ -53,11 +53,6 @@ export default function DashboardPage() {
           <p style={{ color: "#6b7280" }}>
             Vai trò: <strong>{user.role}</strong>
           </p>
-          {user.branch_id && (
-            <p style={{ color: "#6b7280" }}>
-              Chi nhánh: <strong>{user.branch_id}</strong>
-            </p>
-          )}
         </div>
       </div>
     </DashboardLayout>
