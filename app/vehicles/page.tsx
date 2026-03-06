@@ -50,13 +50,8 @@ export default function VehiclesPage() {
   return (
     <DashboardLayout>
       <div>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.5rem",
-        }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Phương Tiện</h1>
+        <div className="page-header">
+          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold" }}>Phương Tiện</h1>
         </div>
 
         {loading ? (
@@ -66,28 +61,30 @@ export default function VehiclesPage() {
             background: "white",
             borderRadius: "0.5rem",
             border: "1px solid #e5e7eb",
-            overflow: "hidden",
+            overflowX: "auto",
           }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 480 }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mã</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Loại</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Trạng thái</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành động</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Mã</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Loại</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Trạng thái</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Hành động</th>
                 </tr>
               </thead>
               <tbody>
                 {vehicles.map((vehicle) => (
                   <tr key={vehicle.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={{ padding: "0.75rem" }}>{vehicle.code}</td>
-                    <td style={{ padding: "0.75rem" }}>{vehicle.type}</td>
-                    <td style={{ padding: "0.75rem" }}>
+                    <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>{vehicle.code}</td>
+                    <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>{vehicle.type}</td>
+                    <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>
                       <span style={{
                         padding: "0.25rem 0.75rem",
                         borderRadius: "9999px",
                         fontSize: "0.75rem",
                         fontWeight: "500",
+                        whiteSpace: "nowrap",
+                        display: "inline-block",
                         background: vehicle.status === "AVAILABLE" ? "#d1fae5" :
                                    vehicle.status === "BORROWING" ? "#fed7aa" : "#fecaca",
                         color: vehicle.status === "AVAILABLE" ? "#065f46" :
@@ -96,7 +93,7 @@ export default function VehiclesPage() {
                         {getVehicleStatusLabel(vehicle.status)}
                       </span>
                     </td>
-                    <td style={{ padding: "0.75rem" }}>
+                    <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
                         {vehicle.status === "AVAILABLE" && (
                           <button

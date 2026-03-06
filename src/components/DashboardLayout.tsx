@@ -32,7 +32,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div>
       <Navbar />
-      <main style={{ padding: "2rem" }}>
+      <main className="main-content" style={{ padding: "2rem" }}>
         {children}
       </main>
     </div>

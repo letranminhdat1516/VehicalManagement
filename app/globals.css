@@ -24,3 +24,63 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ─── Navbar Responsive ─────────────────────────────────── */
+.nav-hamburger {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .nav-desktop {
+    display: none !important;
+  }
+  .nav-right-desktop {
+    display: none !important;
+  }
+  .nav-hamburger {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .nav-mobile-menu {
+    display: none !important;
+  }
+}
+
+/* ─── Main Content Responsive Padding ──────────────────── */
+@media (max-width: 640px) {
+  .main-content {
+    padding: 1rem !important;
+  }
+}
+
+/* ─── Responsive 2-column form grid ────────────────────── */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  .grid-2col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ─── Page Header (title + buttons) ─────────────────────── */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* ─── Responsive button group ───────────────────────────── */
+.btn-group {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}

@@ -224,7 +224,7 @@ export default function DashboardPage() {
           <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#374151", marginBottom: "1rem", marginTop: 0 }}>
             📌 Quy trình mượn xe
           </h3>
-          <div style={{ display: "flex", gap: "0", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: "0", flexWrap: "wrap", rowGap: "0.5rem" }}>
             {[
               { step: "1", label: "Khách quét QR", desc: "Quét mã trên xe", color: "#eff6ff", border: "#bfdbfe", text: "#1e40af" },
               { step: "2", label: "Gửi yêu cầu", desc: "Điền thông tin & CCCD", color: "#f0fdf4", border: "#bbf7d0", text: "#166534" },

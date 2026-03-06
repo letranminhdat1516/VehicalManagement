@@ -94,13 +94,8 @@ export default function BranchesPage() {
   return (
     <DashboardLayout>
       <div>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.5rem",
-        }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Chi Nhánh</h1>
+        <div className="page-header">
+          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold" }}>Chi Nhánh</h1>
           <button
             onClick={() => setShowForm(!showForm)}
             style={{
@@ -206,24 +201,24 @@ export default function BranchesPage() {
             background: "white",
             borderRadius: "0.5rem",
             border: "1px solid #e5e7eb",
-            overflow: "hidden",
+            overflowX: "auto",
           }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 520 }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Tên</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Địa Chỉ</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Số Điện Thoại</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành Động</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Tên</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>?ịa Chỉ</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Số Điện Thoại</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Hành Động</th>
                 </tr>
               </thead>
               <tbody>
                 {branches.map((branch) => (
                   <tr key={branch.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={{ padding: "0.75rem", fontWeight: "500" }}>{branch.name}</td>
+                    <td style={{ padding: "0.75rem", fontWeight: "500", whiteSpace: "nowrap" }}>{branch.name}</td>
                     <td style={{ padding: "0.75rem" }}>{branch.address || "-"}</td>
-                    <td style={{ padding: "0.75rem" }}>{branch.phone || "-"}</td>
-                    <td style={{ padding: "0.75rem" }}>
+                    <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>{branch.phone || "-"}</td>
+                    <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
                         <button
                           onClick={() => handleEdit(branch)}

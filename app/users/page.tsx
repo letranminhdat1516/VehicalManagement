@@ -109,13 +109,8 @@ export default function UsersPage() {
   return (
     <DashboardLayout>
       <div>
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: "1.5rem",
-        }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Tài Khoản Bảo Vệ</h1>
+        <div className="page-header">
+          <h1 style={{ fontSize: "1.75rem", fontWeight: "bold" }}>Tài Khoản Bảo Vệ</h1>
           <button
             onClick={() => setShowForm(!showForm)}
             style={{
@@ -126,6 +121,8 @@ export default function UsersPage() {
               borderRadius: "0.375rem",
               cursor: "pointer",
               fontWeight: "500",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             {showForm ? "Hủy" : "+ Tạo Tài Khoản Mới"}
@@ -153,7 +150,7 @@ export default function UsersPage() {
                   style={{ padding: "0.5rem", border: "1px solid #d1d5db", borderRadius: "0.375rem" }}
                 />
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="grid-2col">
                 <input
                   type="email"
                   placeholder="Email *"
@@ -227,41 +224,43 @@ export default function UsersPage() {
             background: "white",
             borderRadius: "0.5rem",
             border: "1px solid #e5e7eb",
-            overflow: "auto",
+            overflowX: "auto",
           }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 560 }}>
               <thead>
                 <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Họ tên</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Email</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Vai trò</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày tạo</th>
-                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành động</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Họ tên</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Email</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Vai trò</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Ngày tạo</th>
+                  <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Hành động</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
                   <tr key={u.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={{ padding: "0.75rem", fontWeight: u.id === user.id ? "600" : "normal" }}>
+                    <td style={{ padding: "0.75rem", fontWeight: u.id === user.id ? "600" : "normal", whiteSpace: "nowrap" }}>
                       {u.full_name} {u.id === user.id && <span style={{ color: "#6b7280", fontSize: "0.75rem" }}>(Bạn)</span>}
                     </td>
-                    <td style={{ padding: "0.75rem" }}>{u.email}</td>
-                    <td style={{ padding: "0.75rem" }}>
+                    <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>{u.email}</td>
+                    <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>
                       <span style={{
                         padding: "0.25rem 0.75rem",
                         borderRadius: "9999px",
                         fontSize: "0.75rem",
                         fontWeight: "500",
+                        whiteSpace: "nowrap",
+                        display: "inline-block",
                         background: u.role === "ADMIN" ? "#dbeafe" : "#d1fae5",
                         color: u.role === "ADMIN" ? "#1e40af" : "#065f46",
                       }}>
                         {getRoleLabel(u.role)}
                       </span>
                     </td>
-                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280" }}>
+                    <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#6b7280", whiteSpace: "nowrap" }}>
                       {new Date(u.created_at).toLocaleDateString("vi-VN")}
                     </td>
-                    <td style={{ padding: "0.75rem" }}>
+                    <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>
                       {u.id !== user.id && u.role !== "ADMIN" && (
                         <button
                           onClick={() => handleDelete(u)}

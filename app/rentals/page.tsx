@@ -374,14 +374,9 @@ function RentalsContent() {
       {user ? (
         <DashboardLayout>
           <div>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1.5rem",
-          }}>
-            <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Đơn Thuê</h1>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div className="page-header">
+            <h1 style={{ fontSize: "1.75rem", fontWeight: "bold" }}>Đơn Thuê</h1>
+            <div className="btn-group">
               <a
                 href="/qr"
                 style={{
@@ -537,7 +532,7 @@ function RentalsContent() {
                   ))}
                 </select>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+              <div className="grid-2col">
                 <input
                   type="text"
                   placeholder="Tên khách hàng"
@@ -660,26 +655,25 @@ function RentalsContent() {
               border: "1px solid #e5e7eb",
               overflow: "auto",
             }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 700 }}>
                 <thead>
                   <tr style={{ background: "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Khách hàng</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Điện thoại</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mã xe</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ảnh</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày bắt đầu</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày kết thúc</th>
-                    
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Trạng thái</th>
-                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Hành động</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Khách hàng</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Điện thoại</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Mã xe</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Ảnh</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Ngày bắt đầu</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Ngày kết thúc</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Trạng thái</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600", whiteSpace: "nowrap" }}>Hành động</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rentals.map((rental) => (
                     <tr key={rental.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: "0.75rem" }}>{rental.customer_name}</td>
-                      <td style={{ padding: "0.75rem" }}>{rental.phone}</td>
-                      <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "500" }}>
+                      <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>{rental.customer_name}</td>
+                      <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>{rental.phone}</td>
+                      <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "500", whiteSpace: "nowrap" }}>
                         {vehicles.find(v => String(v.id) === String(rental.vehicle_id))?.code ?? String(rental.vehicle_id)}
                       </td>
                       <td style={{ padding: "0.75rem" }}>
@@ -692,22 +686,24 @@ function RentalsContent() {
                           <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>—</span>
                         )}
                       </td>
-                      <td style={{ padding: "0.75rem" }}>
+                      <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>
                         {formatDate(
                           pickDate(rental, ["borrow_time", "created_at"])
                         )}
                       </td>
-                      <td style={{ padding: "0.75rem" }}>
+                      <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>
                         {formatDate(
                           pickDate(rental, ["return_time"])
                         )}
                       </td>
-                      <td style={{ padding: "0.75rem" }}>
+                      <td style={{ padding: "0.75rem", whiteSpace: "nowrap" }}>
                         <span style={{
                           padding: "0.25rem 0.75rem",
                           borderRadius: "9999px",
                           fontSize: "0.75rem",
                           fontWeight: "500",
+                          whiteSpace: "nowrap",
+                          display: "inline-block",
                           background: rental.status === "PENDING" ? "#fef3c7" :
                                      rental.status === "BORROWING" ? "#dbeafe" :
                                      rental.status === "RETURNED" ? "#d1fae5" : "#fecaca",

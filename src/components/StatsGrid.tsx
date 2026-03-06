@@ -57,7 +57,7 @@ export default function StatsGrid({ stats }: StatsGridProps) {
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
       gap: "1rem",
       marginBottom: "2rem",
     }}>
