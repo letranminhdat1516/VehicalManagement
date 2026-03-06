@@ -1,124 +1,111 @@
 import { DashboardStats } from "@/src/types";
 
-interface StatsCardProps {
-  title: string;
-  value: number | string;
-  icon: string;
-  bgColor: string;
-  textColor: string;
-  borderColor: string;
-  subtitle?: string;
-}
-
-function StatsCard({ title, value, icon, bgColor, textColor, borderColor, subtitle }: StatsCardProps) {
-  return (
-    <div style={{
-      padding: "1.25rem 1.5rem",
-      borderRadius: "0.75rem",
-      background: bgColor,
-      border: `1px solid ${borderColor}`,
-      display: "flex",
-      alignItems: "center",
-      gap: "1rem",
-    }}>
-      <div style={{
-        fontSize: "2rem",
-        width: "3rem",
-        height: "3rem",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}>
-        {icon}
-      </div>
-      <div>
-        <div style={{ fontSize: "0.8rem", color: textColor, opacity: 0.75, fontWeight: 500 }}>
-          {title}
-        </div>
-        <div style={{ fontSize: "1.75rem", fontWeight: "700", color: textColor, lineHeight: 1.2 }}>
-          {value}
-        </div>
-        {subtitle && (
-          <div style={{ fontSize: "0.75rem", color: textColor, opacity: 0.6, marginTop: "0.1rem" }}>
-            {subtitle}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 interface StatsGridProps {
   stats: DashboardStats;
 }
 
 export default function StatsGrid({ stats }: StatsGridProps) {
+  const pct = stats.totalVehicles > 0
+    ? Math.round(stats.availableVehicles / stats.totalVehicles * 100)
+    : 0;
+
+  const cells = [
+    { label: "Tổng xe",       value: stats.totalVehicles,      icon: "🚗", color: "#2563eb", bg: "#eff6ff" },
+    { label: "Sẵn sàng",      value: stats.availableVehicles,  icon: "✅", color: "#059669", bg: "#ecfdf5", sub: `${pct}% tổng số` },
+    { label: "Đang mượn",     value: stats.borrowingVehicles,  icon: "🔄", color: "#d97706", bg: "#fffbeb" },
+    { label: "Bảo trì",       value: stats.maintenanceVehicles,icon: "🔧", color: "#dc2626", bg: "#fef2f2" },
+    { label: "Chờ duyệt",     value: stats.pendingRentals,     icon: "⏳", color: "#7c3aed", bg: "#f5f3ff", alert: stats.pendingRentals > 0 },
+    { label: "Hôm nay",       value: stats.rentalsToday,       icon: "📋", color: "#0284c7", bg: "#f0f9ff" },
+    { label: "Tháng này",     value: stats.rentalsThisMonth,   icon: "📅", color: "#9333ea", bg: "#faf5ff" },
+  ];
+
   return (
     <div style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-      gap: "1rem",
-      marginBottom: "2rem",
+      background: "white",
+      border: "1px solid #e2e8f0",
+      borderRadius: "0.75rem",
+      overflow: "hidden",
+      marginBottom: "0.5rem",
     }}>
-      <StatsCard
-        title="Tổng Phương Tiện"
-        value={stats.totalVehicles}
-        icon="🚗"
-        bgColor="#eff6ff"
-        textColor="#1e40af"
-        borderColor="#bfdbfe"
-      />
-      <StatsCard
-        title="Sẵn Sàng"
-        value={stats.availableVehicles}
-        icon="✅"
-        bgColor="#f0fdf4"
-        textColor="#166534"
-        borderColor="#bbf7d0"
-        subtitle={`${stats.totalVehicles > 0 ? Math.round(stats.availableVehicles / stats.totalVehicles * 100) : 0}% tổng số`}
-      />
-      <StatsCard
-        title="Đang Mượn"
-        value={stats.borrowingVehicles}
-        icon="🔄"
-        bgColor="#fffbeb"
-        textColor="#92400e"
-        borderColor="#fde68a"
-      />
-      <StatsCard
-        title="Bảo Trì"
-        value={stats.maintenanceVehicles}
-        icon="🔧"
-        bgColor="#fef2f2"
-        textColor="#991b1b"
-        borderColor="#fecaca"
-      />
-      <StatsCard
-        title="Chờ Xác Nhận"
-        value={stats.pendingRentals}
-        icon="⏳"
-        bgColor="#faf5ff"
-        textColor="#6b21a8"
-        borderColor="#e9d5ff"
-        subtitle="cần xử lý"
-      />
-      <StatsCard
-        title="Đơn Thuê Hôm Nay"
-        value={stats.rentalsToday}
-        icon="📋"
-        bgColor="#f0f9ff"
-        textColor="#0c4a6e"
-        borderColor="#bae6fd"
-      />
-      <StatsCard
-        title="Đơn Thuê Tháng Này"
-        value={stats.rentalsThisMonth}
-        icon="📅"
-        bgColor="#fdf4ff"
-        textColor="#701a75"
-        borderColor="#f5d0fe"
-      />
+      {/* Header row */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${cells.length}, 1fr)`,
+        borderBottom: "2px solid #e2e8f0",
+        background: "#f8fafc",
+      }}>
+        {cells.map((c, i) => (
+          <div key={i} style={{
+            padding: "0.55rem 0.75rem",
+            borderRight: i < cells.length - 1 ? "1px solid #e2e8f0" : "none",
+            display: "flex",
+            alignItems: "center",
+            gap: "0.35rem",
+          }}>
+            <span style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: c.color,
+              flexShrink: 0,
+              display: "inline-block",
+            }} />
+            <span style={{
+              fontSize: "0.68rem",
+              fontWeight: 700,
+              color: "#64748b",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+              whiteSpace: "nowrap",
+            }}>
+              {c.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Value row */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${cells.length}, 1fr)`,
+      }}>
+        {cells.map((c, i) => (
+          <div key={i} style={{
+            padding: "1rem 0.75rem 0.875rem",
+            borderRight: i < cells.length - 1 ? "1px solid #f1f5f9" : "none",
+            background: c.alert ? "#fdf4ff" : "white",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.2rem",
+            outline: c.alert ? "2px solid #7c3aed" : "none",
+            outlineOffset: -1,
+            position: "relative",
+          }}>
+            <div style={{
+              fontSize: "2rem",
+              fontWeight: "800",
+              color: c.alert ? c.color : "#0f172a",
+              lineHeight: 1,
+              letterSpacing: "-0.03em",
+            }}>
+              {c.value}
+            </div>
+            {c.sub && (
+              <div style={{ fontSize: "0.68rem", color: "#94a3b8" }}>{c.sub}</div>
+            )}
+            {c.alert && (
+              <div style={{ fontSize: "0.65rem", color: c.color, fontWeight: 700 }}>⚠ cần xử lý</div>
+            )}
+            <span style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              fontSize: "1rem",
+              opacity: 0.35,
+            }}>{c.icon}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
