@@ -6,12 +6,12 @@ import { useVehicles } from "@/src/hooks/useVehicles";
 import DashboardLayout from "@/src/components/DashboardLayout";
 import QRScanner from "@/src/components/QRScanner";
 import { supabase } from "@/src/lib/supabaseClient";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Rental, RentalStatus } from "@/src/types";
 import { ALLOWED_QR_CODES, isAllowedQrCode } from "@/src/lib/allowedQrCodes";
 
-export default function RentalsPage() {
+function RentalsContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const vehicleCodeParam = searchParams.get("vehicle");
@@ -817,5 +817,13 @@ export default function RentalsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function RentalsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40 }}>Đang tải...</div>}>
+      <RentalsContent />
+    </Suspense>
   );
 }
