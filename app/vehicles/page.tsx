@@ -3,43 +3,12 @@
 import { useAuth } from "@/src/hooks/useAuth";
 import { useVehicles } from "@/src/hooks/useVehicles";
 import DashboardLayout from "@/src/components/DashboardLayout";
-import { useState } from "react";
-import { Vehicle, VehicleType, VehicleStatus } from "@/src/types";
+import { VehicleStatus } from "@/src/types";
 
 export default function VehiclesPage() {
   const { user } = useAuth();
-  const { vehicles, loading, createVehicle, updateVehicle, deleteVehicle, updateVehicleStatus } =
+  const { vehicles, loading, deleteVehicle, updateVehicleStatus } =
     useVehicles(user?.role || "GUARD", user?.branch_id || null);
-
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    code: "",
-    type: "WHEELCHAIR" as VehicleType,
-    status: "AVAILABLE" as VehicleStatus,
-    branch_id: user?.branch_id || "",
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const result = await createVehicle(formData);
-    if (result.success) {
-      alert("Đã tạo phương tiện thành công!");
-      resetForm();
-    } else {
-      alert(`Lỗi: ${result.error}`);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      code: "",
-      type: "WHEELCHAIR",
-      status: "AVAILABLE",
-      branch_id: user?.branch_id || "",
-    });
-    setShowForm(false);
-  };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Bạn có chắc chắn muốn xóa phương tiện này?")) return;
@@ -67,8 +36,8 @@ export default function VehiclesPage() {
     switch (status) {
       case "AVAILABLE":
         return "Sẵn Sàng";
-      case "RENTED":
-        return "Đang Thuê";
+      case "BORROWING":
+        return "Đang Mượn";
       case "MAINTENANCE":
         return "Bảo Trì";
       default:
@@ -88,97 +57,7 @@ export default function VehiclesPage() {
           marginBottom: "1.5rem",
         }}>
           <h1 style={{ fontSize: "2rem", fontWeight: "bold" }}>Phương Tiện</h1>
-          {user.role === "ADMIN" && (
-            <button
-              onClick={() => setShowForm(!showForm)}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: "#3b82f6",
-                color: "white",
-                border: "none",
-                borderRadius: "0.375rem",
-                cursor: "pointer",
-                fontWeight: "500",
-              }}
-            >
-              {showForm ? "Hủy" : "Thêm Phương Tiện"}
-            </button>
-          )}
         </div>
-
-        {showForm && (
-          <div style={{
-            padding: "1.5rem",
-            background: "white",
-            borderRadius: "0.5rem",
-            border: "1px solid #e5e7eb",
-            marginBottom: "1.5rem",
-          }}>
-            <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
-              Tạo Phương Tiện Mới
-            </h2>
-            <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                <input
-                  type="text"
-                  placeholder="Mã xe"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  required
-                  style={{
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                  }}
-                />
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as VehicleType })}
-                  style={{
-                    padding: "0.5rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                  }}
-                >
-                  <option value="WHEELCHAIR">Xe lăn</option>
-                  <option value="STROLLER">Xe đẩy</option>
-                </select>
-              </div>
-
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  type="submit"
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    background: "#10b981",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "0.375rem",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                >
-                  Tạo Mới
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    background: "#6b7280",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "0.375rem",
-                    cursor: "pointer",
-                    fontWeight: "500",
-                  }}
-                >
-                  Hủy
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
 
         {loading ? (
           <div>Đang tải phương tiện...</div>
@@ -210,31 +89,15 @@ export default function VehiclesPage() {
                         fontSize: "0.75rem",
                         fontWeight: "500",
                         background: vehicle.status === "AVAILABLE" ? "#d1fae5" :
-                                   vehicle.status === "RENTED" ? "#fed7aa" : "#fecaca",
+                                   vehicle.status === "BORROWING" ? "#fed7aa" : "#fecaca",
                         color: vehicle.status === "AVAILABLE" ? "#065f46" :
-                               vehicle.status === "RENTED" ? "#92400e" : "#991b1b",
+                               vehicle.status === "BORROWING" ? "#92400e" : "#991b1b",
                       }}>
                         {getVehicleStatusLabel(vehicle.status)}
                       </span>
                     </td>
                     <td style={{ padding: "0.75rem" }}>
                       <div style={{ display: "flex", gap: "0.5rem" }}>
-                        {user.role === "ADMIN" && (
-                          <button
-                            onClick={() => handleDelete(vehicle.id)}
-                            style={{
-                              padding: "0.25rem 0.75rem",
-                              background: "#ef4444",
-                              color: "white",
-                              border: "none",
-                              borderRadius: "0.25rem",
-                              cursor: "pointer",
-                              fontSize: "0.75rem",
-                            }}
-                          >
-                            Xóa
-                          </button>
-                        )}
                         {vehicle.status === "AVAILABLE" && (
                           <button
                             onClick={() => handleStatusChange(vehicle.id, "MAINTENANCE")}

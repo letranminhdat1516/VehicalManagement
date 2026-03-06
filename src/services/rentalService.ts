@@ -47,36 +47,68 @@ export const rentalService = {
 
   async createRental(rental: Partial<Rental>): Promise<ApiResponse<Rental>> {
     try {
-      // Check if vehicle is available
-      if (rental.vehicle_id) {
-        const vehicleResponse = await vehicleService.getVehicleById(rental.vehicle_id);
-        
-        if (vehicleResponse.error || !vehicleResponse.data) {
-          return { data: null, error: "Vehicle not found" };
-        }
-
-        if (vehicleResponse.data.status !== "AVAILABLE") {
-          return { data: null, error: "Vehicle is not available" };
-        }
-
-        // Create rental
-        const { data, error } = await supabase
-          .from("rentals")
-          .insert([rental])
-          .select()
-          .single();
-
-        if (error) {
-          return { data: null, error: error.message };
-        }
-
-        // Update vehicle status to RENTED
-        await vehicleService.updateVehicleStatus(rental.vehicle_id, "RENTED");
-
-        return { data: data as Rental, error: null };
+      if (!rental.vehicle_id) {
+        return { data: null, error: "Vehicle ID is required" };
       }
 
-      return { data: null, error: "Vehicle ID is required" };
+      const vehicleResponse = await vehicleService.getVehicleById(rental.vehicle_id);
+      if (vehicleResponse.error || !vehicleResponse.data) {
+        return { data: null, error: "Vehicle not found" };
+      }
+      if (vehicleResponse.data.status !== "AVAILABLE") {
+        return { data: null, error: "Vehicle is not available" };
+      }
+
+      const { data, error } = await supabase
+        .from("rentals")
+        .insert([rental])
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      // Vehicle stays AVAILABLE until guard approves
+      return { data: data as Rental, error: null };
+    } catch (error: any) {
+      return { data: null, error: error.message };
+    }
+  },
+
+  async approveRental(id: string): Promise<ApiResponse<Rental>> {
+    try {
+      const rentalResponse = await this.getRentalById(id);
+      if (rentalResponse.error || !rentalResponse.data) {
+        return { data: null, error: "Rental not found" };
+      }
+
+      const rental = rentalResponse.data;
+      if (rental.status !== "PENDING") {
+        return { data: null, error: "Chỉ có thể xác nhận đơn ở trạng thái chờ" };
+      }
+
+      // Check vehicle still available
+      const vehicleResponse = await vehicleService.getVehicleById(rental.vehicle_id);
+      if (vehicleResponse.data?.status !== "AVAILABLE") {
+        return { data: null, error: "Xe đã được mượn bởi người khác" };
+      }
+
+      const { data, error } = await supabase
+        .from("rentals")
+        .update({ status: "BORROWING", approved_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      // Lock the vehicle
+      await vehicleService.updateVehicleStatus(rental.vehicle_id, "BORROWING");
+
+      return { data: data as Rental, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
@@ -87,68 +119,29 @@ export const rentalService = {
     totalAmount: number
   ): Promise<ApiResponse<Rental>> {
     try {
-      // Get rental details
       const rentalResponse = await this.getRentalById(id);
-      
       if (rentalResponse.error || !rentalResponse.data) {
         return { data: null, error: "Rental not found" };
       }
 
       const rental = rentalResponse.data;
-
-      const completedAt = new Date().toISOString();
-      const statusCandidates = ["COMPLETED", "RETURNED", "DONE", "FINISHED", "CLOSED"];
-      const basePayloads = [
-        { end_date: completedAt, total_amount: totalAmount },
-        { returned_at: completedAt, total_amount: totalAmount },
-        { completed_at: completedAt, total_amount: totalAmount },
-        {},
-      ];
-
-      let data: Rental | null = null;
-      let error: { message: string } | null = null;
-
-      const tryUpdate = async (payload: Record<string, any>) => {
-        const result = await supabase
-          .from("rentals")
-          .update(payload)
-          .eq("id", id)
-          .select()
-          .single();
-
-        return result;
-      };
-
-      for (const status of statusCandidates) {
-        for (const base of basePayloads) {
-          const result = await tryUpdate({ status, ...base });
-          if (!result.error) {
-            data = result.data as Rental;
-            error = null;
-            break;
-          }
-          error = result.error;
-        }
-        if (data) break;
+      if (rental.status !== "BORROWING") {
+        return { data: null, error: "Chỉ có thể trả xe đang ở trạng thái đang mượn" };
       }
 
-      if (!data) {
-        for (const base of basePayloads) {
-          const result = await tryUpdate(base);
-          if (!result.error) {
-            data = result.data as Rental;
-            error = null;
-            break;
-          }
-          error = result.error;
-        }
+      const returnedAt = new Date().toISOString();
+
+      const { data, error } = await supabase
+        .from("rentals")
+        .update({ status: "RETURNED", return_time: returnedAt })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
       }
 
-      if (error || !data) {
-        return { data: null, error: error?.message || "Update failed" };
-      }
-
-      // Update vehicle status to AVAILABLE
       await vehicleService.updateVehicleStatus(rental.vehicle_id, "AVAILABLE");
 
       return { data: data as Rental, error: null };
@@ -178,8 +171,10 @@ export const rentalService = {
         return { data: null, error: error.message };
       }
 
-      // Update vehicle status to AVAILABLE
-      await vehicleService.updateVehicleStatus(rental.vehicle_id, "AVAILABLE");
+      // Only release vehicle if it was actively borrowed (not pending)
+      if (rental.status === "BORROWING") {
+        await vehicleService.updateVehicleStatus(rental.vehicle_id, "AVAILABLE");
+      }
 
       return { data: data as Rental, error: null };
     } catch (error: any) {

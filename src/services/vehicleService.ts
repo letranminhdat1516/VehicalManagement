@@ -101,17 +101,19 @@ export const vehicleService = {
     status: Vehicle["status"]
   ): Promise<ApiResponse<Vehicle>> {
     try {
-      const { data, error } = await supabase
-        .from("vehicles")
-        .update({ status })
-        .eq("id", id)
-        .select();
+      const res = await fetch(`/api/vehicles/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
 
-      if (error) {
-        return { data: null, error: error.message };
+      const json = await res.json();
+
+      if (!res.ok) {
+        return { data: null, error: json.error || "Cập nhật thất bại" };
       }
 
-      return { data: (data && data[0]) as Vehicle, error: null };
+      return { data: json.data as Vehicle, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }

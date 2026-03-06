@@ -1,8 +1,8 @@
 // Database Types
 export type UserRole = "ADMIN" | "GUARD" | "USER";
-export type VehicleStatus = "AVAILABLE" | "RENTED" | "MAINTENANCE";
+export type VehicleStatus = "AVAILABLE" | "BORROWING" | "MAINTENANCE";
 export type VehicleType = "CAR" | "MOTORCYCLE" | "TRUCK" | "VAN" | "WHEELCHAIR" | "STROLLER";
-export type RentalStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
+export type RentalStatus = "PENDING" | "BORROWING" | "RETURNED" | "CANCELLED";
 
 export interface AppUser {
   id: string;
@@ -27,13 +27,9 @@ export interface Vehicle {
   id: string;
   code: string;
   type: VehicleType;
-  brand: string | null;
-  model: string | null;
-  year: number | null;
-  plate_number: string | null;
   status: VehicleStatus;
   branch_id: string;
-  daily_rate: number;
+  note: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -41,17 +37,19 @@ export interface Vehicle {
 export interface Rental {
   id: string;
   vehicle_id: string;
+  branch_id: string | null;
   customer_name: string;
-  customer_phone: string;
-  customer_id_number: string | null;
-  start_date: string;
-  end_date: string | null;
-  daily_rate: number;
-  total_amount: number | null;
+  phone: string;
+  citizen_id_hash: string | null;
+  citizen_id_last4: string | null;
+  citizen_image_path: string | null;
   status: RentalStatus;
-  guard_id: string;
-  branch_id: string;
-  notes: string | null;
+  borrow_time: string;
+  approved_at: string | null;
+  approved_by: string | null;
+  return_time: string | null;
+  returned_by: string | null;
+  note: string | null;
   created_at: string;
   updated_at: string;
 }

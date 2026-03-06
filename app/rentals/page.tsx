@@ -16,7 +16,7 @@ export default function RentalsPage() {
   const searchParams = useSearchParams();
   const vehicleCodeParam = searchParams.get("vehicle");
   const isPublic = !user && !!vehicleCodeParam;
-  const { rentals, loading, createRental, completeRental, cancelRental } =
+  const { rentals, loading, createRental, completeRental, cancelRental, approveRental } =
     useRentals(user?.role || "GUARD", user?.branch_id || null);
   const { vehicles } = useVehicles(user?.role || "GUARD", user?.branch_id || null);
 
@@ -51,16 +51,11 @@ export default function RentalsPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "ACTIVE":
-        return "Đang Thuê";
       case "PENDING":
         return "Chờ Xác Nhận";
-      case "COMPLETED":
-        return "Hoàn Tất";
+      case "BORROWING":
+        return "Đang Mượn";
       case "RETURNED":
-      case "DONE":
-      case "FINISHED":
-      case "CLOSED":
         return "Đã Trả";
       case "CANCELLED":
         return "Đã Hủy";
@@ -215,12 +210,14 @@ export default function RentalsPage() {
     const notesWithCccd = `${formData.notes ? formData.notes + "\n" : ""}CCCD: ${cccdUrl}`;
 
     const result = await createRental({
-      ...formData,
-      guard_id: user?.id || "",
+      vehicle_id: formData.vehicle_id,
+      customer_name: formData.customer_name,
+      phone: formData.customer_phone,
       branch_id: user?.branch_id || selectedVehicle.branch_id,
-      daily_rate: selectedVehicle.daily_rate,
-      status: "ACTIVE" as RentalStatus,
-      notes: notesWithCccd,
+      status: "PENDING" as RentalStatus,
+      borrow_time: new Date().toISOString(),
+      note: notesWithCccd,
+      citizen_image_path: cccdUrl || undefined,
     });
 
     if (result.success) {
@@ -268,6 +265,17 @@ export default function RentalsPage() {
     }
   };
 
+  const handleApprove = async (rental: Rental) => {
+    if (!confirm("Xác nhận cho khách mượn xe?")) return;
+
+    const result = await approveRental(rental.id);
+    if (result.success) {
+      alert("Đã xác nhận mượn xe thành công!");
+    } else {
+      alert(`Lỗi: ${result.error}`);
+    }
+  };
+
   const handleScanRent = (value: string) => {
     const code = value.trim();
     const matched = vehicles.find(
@@ -292,7 +300,7 @@ export default function RentalsPage() {
     }
 
     const rental = rentals.find(
-      (r) => r.status === "ACTIVE" && r.vehicle_id === matched.id
+      (r) => r.status === "BORROWING" && r.vehicle_id === matched.id
     );
 
     if (!rental) {
@@ -424,7 +432,7 @@ export default function RentalsPage() {
                   <option value="">Chọn phương tiện</option>
                   {availableVehicles.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.code} - {vehicle.brand} {vehicle.model} ({vehicle.daily_rate?.toLocaleString() || "0"} VNĐ/ngày)
+                      {vehicle.code} - {vehicle.type}
                     </option>
                   ))}
                 </select>
@@ -569,18 +577,18 @@ export default function RentalsPage() {
                   {rentals.map((rental) => (
                     <tr key={rental.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                       <td style={{ padding: "0.75rem" }}>{rental.customer_name}</td>
-                      <td style={{ padding: "0.75rem" }}>{rental.customer_phone}</td>
+                      <td style={{ padding: "0.75rem" }}>{rental.phone}</td>
                       <td style={{ padding: "0.75rem", fontSize: "0.75rem" }}>
                         {String(rental.vehicle_id).substring(0, 8)}...
                       </td>
                       <td style={{ padding: "0.75rem" }}>
                         {formatDate(
-                          pickDate(rental, ["start_date", "start_at", "start_time", "created_at"])
+                          pickDate(rental, ["borrow_time", "created_at"])
                         )}
                       </td>
                       <td style={{ padding: "0.75rem" }}>
                         {formatDate(
-                          pickDate(rental, ["end_date", "end_at", "end_time", "returned_at", "completed_at"])
+                          pickDate(rental, ["return_time"])
                         )}
                       </td>
                       <td style={{ padding: "0.75rem" }}>
@@ -589,47 +597,66 @@ export default function RentalsPage() {
                           borderRadius: "9999px",
                           fontSize: "0.75rem",
                           fontWeight: "500",
-                          background: rental.status === "ACTIVE" ? "#dbeafe" :
-                                     rental.status === "COMPLETED" ? "#d1fae5" : "#fecaca",
-                          color: rental.status === "ACTIVE" ? "#1e40af" :
-                                 rental.status === "COMPLETED" ? "#065f46" : "#991b1b",
+                          background: rental.status === "PENDING" ? "#fef3c7" :
+                                     rental.status === "BORROWING" ? "#dbeafe" :
+                                     rental.status === "RETURNED" ? "#d1fae5" : "#fecaca",
+                          color: rental.status === "PENDING" ? "#92400e" :
+                                 rental.status === "BORROWING" ? "#1e40af" :
+                                 rental.status === "RETURNED" ? "#065f46" : "#991b1b",
                         }}>
                           {getStatusLabel(rental.status)}
                         </span>
                       </td>
                       <td style={{ padding: "0.75rem" }}>
                         <div style={{ display: "flex", gap: "0.5rem" }}>
-                          {rental.status !== "COMPLETED" && rental.status !== "CANCELLED" && (
-                            <>
-                              <button
-                                onClick={() => handleComplete(rental)}
-                                style={{
-                                  padding: "0.25rem 0.75rem",
-                                  background: "#10b981",
-                                  color: "white",
-                                  border: "none",
-                                  borderRadius: "0.25rem",
-                                  cursor: "pointer",
-                                  fontSize: "0.75rem",
-                                }}
-                              >
-                                Trả Xe
-                              </button>
-                              <button
-                                onClick={() => handleCancel(rental.id)}
-                                style={{
-                                  padding: "0.25rem 0.75rem",
-                                  background: "#ef4444",
-                                  color: "white",
-                                  border: "none",
-                                  borderRadius: "0.25rem",
-                                  cursor: "pointer",
-                                  fontSize: "0.75rem",
-                                }}
-                              >
-                                Hủy
-                              </button>
-                            </>
+                          {rental.status === "PENDING" && (
+                            <button
+                              onClick={() => handleApprove(rental)}
+                              style={{
+                                padding: "0.25rem 0.75rem",
+                                background: "#f59e0b",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "0.25rem",
+                                cursor: "pointer",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                              }}
+                            >
+                              ✓ Xác Nhận Mượn
+                            </button>
+                          )}
+                          {rental.status === "BORROWING" && (
+                            <button
+                              onClick={() => handleComplete(rental)}
+                              style={{
+                                padding: "0.25rem 0.75rem",
+                                background: "#10b981",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "0.25rem",
+                                cursor: "pointer",
+                                fontSize: "0.75rem",
+                              }}
+                            >
+                              Trả Xe
+                            </button>
+                          )}
+                          {(rental.status === "PENDING" || rental.status === "BORROWING") && user?.role === "ADMIN" && (
+                            <button
+                              onClick={() => handleCancel(rental.id)}
+                              style={{
+                                padding: "0.25rem 0.75rem",
+                                background: "#ef4444",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "0.25rem",
+                                cursor: "pointer",
+                                fontSize: "0.75rem",
+                              }}
+                            >
+                              Hủy
+                            </button>
                           )}
                         </div>
                       </td>

@@ -41,7 +41,7 @@ export default function QRPage() {
                 padding: "1rem",
               }}>
                 <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
-                  {code} - {matched ? `${matched.brand} ${matched.model}` : "Chưa gán xe"}
+                  {code} - {matched ? matched.type : "Chưa gán xe"}
                 </div>
                 <QRCodeCanvas value={qrValue} size={180} />
                 <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#6b7280" }}>

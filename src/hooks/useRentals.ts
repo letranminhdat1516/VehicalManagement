@@ -61,6 +61,17 @@ export function useRentals(userRole: UserRole, branchId: string | null) {
     return { success: true, error: null };
   };
 
+  const approveRental = async (id: string) => {
+    const response = await rentalService.approveRental(id);
+
+    if (response.error) {
+      return { success: false, error: response.error };
+    }
+
+    await loadRentals();
+    return { success: true, error: null };
+  };
+
   return {
     rentals,
     loading,
@@ -69,5 +80,6 @@ export function useRentals(userRole: UserRole, branchId: string | null) {
     createRental,
     completeRental,
     cancelRental,
+    approveRental,
   };
 }
