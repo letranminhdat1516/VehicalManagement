@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/src/lib/supabaseAdmin";
-import { ALLOWED_QR_CODES } from "@/src/lib/allowedQrCodes";
 import crypto from "crypto";
 
 export const runtime = "nodejs";
@@ -16,8 +15,8 @@ export async function POST(req: Request) {
       cccd_url,
     } = body || {};
 
-    if (!vehicle_code || !ALLOWED_QR_CODES.includes(vehicle_code)) {
-      return NextResponse.json({ error: "Mã xe không hợp lệ" }, { status: 400 });
+    if (!vehicle_code) {
+      return NextResponse.json({ error: "Thiếu mã xe" }, { status: 400 });
     }
 
     if (!customer_name || !customer_phone) {

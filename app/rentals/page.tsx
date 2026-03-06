@@ -5,11 +5,38 @@ import { useRentals } from "@/src/hooks/useRentals";
 import { useVehicles } from "@/src/hooks/useVehicles";
 import DashboardLayout from "@/src/components/DashboardLayout";
 import QRScanner from "@/src/components/QRScanner";
+import CccdImage from "@/src/components/CccdImage";
 import { supabase } from "@/src/lib/supabaseClient";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Rental, RentalStatus } from "@/src/types";
-import { ALLOWED_QR_CODES, isAllowedQrCode } from "@/src/lib/allowedQrCodes";
+
+// Lightbox image with auto-signed URL
+function LightboxImg({ src }: { src: string | null }) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!src) return;
+    setLoading(true);
+    fetch(`/api/cccd-signed-url?path=${encodeURIComponent(src)}`)
+      .then(r => r.json())
+      .then(d => { if (d.signedUrl) setSignedUrl(d.signedUrl); })
+      .finally(() => setLoading(false));
+  }, [src]);
+  if (!src) return null;
+  if (loading) return (
+    <div style={{ width: 320, height: 200, background: "#111", borderRadius: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+      Đang tải...
+    </div>
+  );
+  return (
+    <img
+      src={signedUrl ?? ""}
+      alt="CCCD"
+      style={{ maxWidth: "90vw", maxHeight: "85vh", borderRadius: "0.75rem", boxShadow: "0 20px 60px rgba(0,0,0,0.5)", display: "block" }}
+    />
+  );
+}
 
 function RentalsContent() {
   const { user } = useAuth();
@@ -24,6 +51,7 @@ function RentalsContent() {
   const [showScanRent, setShowScanRent] = useState(false);
   const [showScanReturn, setShowScanReturn] = useState(false);
   const [cccdFile, setCccdFile] = useState<File | null>(null);
+  const [cccdPreview, setCccdPreview] = useState<string | null>(null);
   const [publicSubmitting, setPublicSubmitting] = useState(false);
   const [publicSubmitted, setPublicSubmitted] = useState(false);
   const [publicReceipt, setPublicReceipt] = useState<{
@@ -73,8 +101,40 @@ function RentalsContent() {
     notes: "",
   });
 
+  const today = new Date().toISOString().split("T")[0];
+  const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+  const [exportFrom, setExportFrom] = useState(firstOfMonth);
+  const [exportTo, setExportTo] = useState(today);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (exportFrom) params.set("from", exportFrom);
+      if (exportTo) params.set("to", exportTo);
+      const res = await fetch(`/api/export/rentals?${params.toString()}`);
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Lỗi export: ${err.error}`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `don_thue_${exportFrom}_den_${exportTo}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert(`Lỗi: ${e.message}`);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const availableVehicles = vehicles.filter(
-    (v) => v.status === "AVAILABLE" && ALLOWED_QR_CODES.includes(v.code)
+    (v) => v.status === "AVAILABLE"
   );
 
   useEffect(() => {
@@ -83,7 +143,7 @@ function RentalsContent() {
     if (!vehicleCode || !vehicles.length) return;
 
     const matched = vehicles.find(
-      (v) => v.code === vehicleCode && ALLOWED_QR_CODES.includes(v.code)
+      (v) => v.code === vehicleCode
     );
     if (!matched) return;
 
@@ -126,8 +186,8 @@ function RentalsContent() {
     e.preventDefault();
 
     const vehicleCode = vehicleCodeParam?.trim() || "";
-    if (!vehicleCode || !isAllowedQrCode(vehicleCode)) {
-      alert("Mã xe không hợp lệ. Chỉ cho phép 6 mã cố định.");
+    if (!vehicleCode) {
+      alert("Mã xe không hợp lệ.");
       return;
     }
 
@@ -186,11 +246,6 @@ function RentalsContent() {
     const selectedVehicle = vehicles.find((v) => v.id === formData.vehicle_id);
     if (!selectedVehicle) {
       alert("Vui lòng chọn phương tiện");
-      return;
-    }
-
-    if (!isAllowedQrCode(selectedVehicle.code)) {
-      alert("Mã xe không hợp lệ. Chỉ cho phép 6 mã cố định.");
       return;
     }
 
@@ -279,7 +334,7 @@ function RentalsContent() {
   const handleScanRent = (value: string) => {
     const code = value.trim();
     const matched = vehicles.find(
-      (v) => (v.code === code || v.id === code) && ALLOWED_QR_CODES.includes(v.code)
+      (v) => v.code === code || String(v.id) === code
     );
     if (!matched) {
       alert("Không tìm thấy phương tiện từ mã QR");
@@ -292,7 +347,7 @@ function RentalsContent() {
   const handleScanReturn = (value: string) => {
     const code = value.trim();
     const matched = vehicles.find(
-      (v) => (v.code === code || v.id === code) && ALLOWED_QR_CODES.includes(v.code)
+      (v) => v.code === code || String(v.id) === code
     );
     if (!matched) {
       alert("Không tìm thấy phương tiện từ mã QR");
@@ -369,6 +424,51 @@ function RentalsContent() {
                 {showForm ? "Hủy" : "Thuê Mới"}
               </button>
             </div>
+          </div>
+
+          {/* Export Excel */}
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            marginBottom: "1.25rem",
+            padding: "0.875rem 1.25rem",
+            background: "white",
+            border: "1px solid #e5e7eb",
+            borderRadius: "0.5rem",
+            flexWrap: "wrap",
+          }}>
+            <span style={{ fontSize: "0.875rem", fontWeight: "600", color: "#374151" }}>📊 Xuất Excel:</span>
+            <label style={{ fontSize: "0.8rem", color: "#6b7280" }}>Từ ngày</label>
+            <input
+              type="date"
+              value={exportFrom}
+              onChange={e => setExportFrom(e.target.value)}
+              style={{ padding: "0.35rem 0.6rem", border: "1px solid #d1d5db", borderRadius: "0.375rem", fontSize: "0.875rem" }}
+            />
+            <label style={{ fontSize: "0.8rem", color: "#6b7280" }}>Đến ngày</label>
+            <input
+              type="date"
+              value={exportTo}
+              onChange={e => setExportTo(e.target.value)}
+              style={{ padding: "0.35rem 0.6rem", border: "1px solid #d1d5db", borderRadius: "0.375rem", fontSize: "0.875rem" }}
+            />
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              style={{
+                padding: "0.4rem 1.25rem",
+                background: exporting ? "#9ca3af" : "#16a34a",
+                color: "white",
+                border: "none",
+                borderRadius: "0.375rem",
+                cursor: exporting ? "not-allowed" : "pointer",
+                fontWeight: "600",
+                fontSize: "0.875rem",
+              }}
+            >
+              {exporting ? "Đang xuất..." : "⬇ Tải Excel"}
+            </button>
           </div>
 
           {showScanRent && (
@@ -566,6 +666,7 @@ function RentalsContent() {
                     <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Khách hàng</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Điện thoại</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Mã xe</th>
+                    <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ảnh</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày bắt đầu</th>
                     <th style={{ padding: "0.75rem", textAlign: "left", fontWeight: "600" }}>Ngày kết thúc</th>
                     
@@ -578,8 +679,18 @@ function RentalsContent() {
                     <tr key={rental.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                       <td style={{ padding: "0.75rem" }}>{rental.customer_name}</td>
                       <td style={{ padding: "0.75rem" }}>{rental.phone}</td>
-                      <td style={{ padding: "0.75rem", fontSize: "0.75rem" }}>
-                        {String(rental.vehicle_id).substring(0, 8)}...
+                      <td style={{ padding: "0.75rem", fontSize: "0.875rem", fontWeight: "500" }}>
+                        {vehicles.find(v => String(v.id) === String(rental.vehicle_id))?.code ?? String(rental.vehicle_id)}
+                      </td>
+                      <td style={{ padding: "0.75rem" }}>
+                        {rental.citizen_image_path ? (
+                          <CccdImage
+                            src={rental.citizen_image_path}
+                            onClick={() => setCccdPreview(rental.citizen_image_path!)}
+                          />
+                        ) : (
+                          <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: "0.75rem" }}>
                         {formatDate(
@@ -669,150 +780,273 @@ function RentalsContent() {
           </div>
         </DashboardLayout>
       ) : (
-        <div style={{ maxWidth: 720, margin: "2rem auto", padding: "0 1rem" }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.5rem" }}>
-            Phiếu Mượn Xe
-          </h1>
-          <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
-            Vui lòng điền thông tin để mượn xe. Sau khi gửi, hãy đưa cho bảo vệ xác nhận.
-          </p>
-          <div style={{
-            padding: "1.5rem",
-            background: "white",
-            borderRadius: "0.5rem",
-            border: "1px solid #e5e7eb",
-            marginBottom: "1.5rem",
-          }}>
-            {publicSubmitted ? (
-              <div style={{ textAlign: "center", padding: "1.5rem 0" }}>
-                <div style={{ fontSize: "1.5rem", fontWeight: "700", marginBottom: "0.75rem" }}>
-                  Gửi yêu cầu thành công
-                </div>
-                <div style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
-                  Vui lòng đưa điện thoại cho bảo vệ để xác nhận.
-                </div>
-                {publicReceipt && (
+        <div style={{
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+          padding: "1rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+        }}>
+          {/* Header */}
+          <div style={{ width: "100%", maxWidth: 480, marginBottom: "1.25rem", textAlign: "center" }}>
+            <div style={{ fontSize: "2rem", marginBottom: "0.25rem" }}>🚗</div>
+            <h1 style={{ fontSize: "1.5rem", fontWeight: "800", color: "#0c4a6e", margin: 0 }}>
+              Go Mall Rental
+            </h1>
+            <p style={{ color: "#0369a1", fontSize: "0.85rem", marginTop: "0.25rem", marginBottom: 0 }}>
+              Phiếu Mượn Xe
+            </p>
+          </div>
+
+          <div style={{ width: "100%", maxWidth: 480 }}>
+            <div style={{
+              background: "white",
+              borderRadius: "1rem",
+              boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+              overflow: "hidden",
+            }}>
+              {publicSubmitted ? (
+                /* SUCCESS */
+                <div style={{ padding: "2rem 1.5rem", textAlign: "center" }}>
+                  <div style={{ fontSize: "3.5rem", marginBottom: "0.75rem" }}>✅</div>
+                  <h2 style={{ fontSize: "1.3rem", fontWeight: "700", color: "#065f46", margin: "0 0 0.5rem" }}>
+                    Gửi yêu cầu thành công!
+                  </h2>
+                  <p style={{ color: "#6b7280", fontSize: "0.9rem", marginBottom: "1.5rem" }}>
+                    Vui lòng đưa màn hình này cho bảo vệ để xác nhận.
+                  </p>
+                  {publicReceipt && (
+                    <div style={{
+                      background: "#f0fdf4",
+                      border: "1px solid #bbf7d0",
+                      borderRadius: "0.75rem",
+                      padding: "1rem 1.25rem",
+                      textAlign: "left",
+                      fontSize: "0.9rem",
+                      marginBottom: "1.5rem",
+                      display: "grid",
+                      gap: "0.5rem",
+                    }}>
+                      {([
+                        ["🚗 Mã xe", publicReceipt.vehicleCode],
+                        ["👤 Khách hàng", publicReceipt.customerName],
+                        ["📞 Số điện thoại", publicReceipt.customerPhone],
+                        ["📝 Ghi chú", publicReceipt.notes || "—"],
+                        ["🪪 Ảnh CCCD", publicReceipt.cccdFileName],
+                        ["🕐 Thời gian", publicReceipt.submittedAt],
+                      ] as [string, string][]).map(([label, value]) => (
+                        <div key={label} style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+                          <span style={{ color: "#6b7280", minWidth: 130, flexShrink: 0 }}>{label}:</span>
+                          <span style={{ fontWeight: "600", color: "#111827", wordBreak: "break-word" }}>{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div style={{
-                    textAlign: "left",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "0.5rem",
-                    padding: "1rem",
-                    marginBottom: "1.5rem",
-                    background: "#f9fafb",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.6rem 1.5rem",
+                    background: "#d1fae5",
+                    color: "#065f46",
+                    borderRadius: "9999px",
+                    fontWeight: "700",
                     fontSize: "0.95rem",
                   }}>
-                    <div><strong>Mã xe:</strong> {publicReceipt.vehicleCode}</div>
-                    <div><strong>Khách hàng:</strong> {publicReceipt.customerName}</div>
-                    <div><strong>Số điện thoại:</strong> {publicReceipt.customerPhone}</div>
-                    <div><strong>Ghi chú:</strong> {publicReceipt.notes}</div>
-                    <div><strong>Ảnh CCCD:</strong> {publicReceipt.cccdFileName}</div>
-                    <div><strong>Thời gian:</strong> {publicReceipt.submittedAt}</div>
+                    ⏳ Chờ bảo vệ xác nhận
                   </div>
-                )}
-                <div style={{
-                  display: "inline-block",
-                  padding: "0.5rem 1rem",
-                  background: "#d1fae5",
-                  color: "#065f46",
-                  borderRadius: "9999px",
-                  fontWeight: "600",
-                }}>
-                  Chờ xác nhận
                 </div>
-              </div>
-            ) : (
-              <>
-                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
-                  Tạo Đơn Thuê Mới
-                </h2>
-                <form
-                  onSubmit={handlePublicSubmit}
-                  style={{ display: "grid", gap: "1rem" }}
-                >
+              ) : (
+                /* FORM */
+                <>
                   <div style={{
-                    padding: "0.75rem",
-                    border: "1px solid #d1d5db",
-                    borderRadius: "0.375rem",
-                    background: "#f9fafb",
-                    fontWeight: "500",
+                    background: "linear-gradient(135deg, #0c4a6e, #0369a1)",
+                    padding: "1.25rem 1.5rem",
+                    color: "white",
                   }}>
-                    Mã xe: {vehicleCodeParam}
+                    <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700" }}>
+                      Điền thông tin mượn xe
+                    </h2>
+                    <p style={{ margin: "0.25rem 0 0", fontSize: "0.8rem", opacity: 0.8 }}>
+                      Tất cả các trường có dấu * là bắt buộc
+                    </p>
                   </div>
 
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                    <input
-                      type="text"
-                      placeholder="Tên khách hàng"
-                      value={formData.customer_name}
-                      onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
-                      required
-                      style={{
-                        padding: "0.5rem",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "0.375rem",
-                      }}
-                    />
-                    <input
-                      type="tel"
-                      placeholder="Số điện thoại"
-                      value={formData.customer_phone}
-                      onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
-                      required
-                      style={{
-                        padding: "0.5rem",
-                        border: "1px solid #d1d5db",
-                        borderRadius: "0.375rem",
-                      }}
-                    />
-                  </div>
+                  <form onSubmit={handlePublicSubmit} style={{ padding: "1.25rem 1.5rem", display: "grid", gap: "1rem" }}>
+                    {/* Mã xe */}
+                    <div style={{
+                      padding: "0.75rem 1rem",
+                      background: "#eff6ff",
+                      border: "1px solid #bfdbfe",
+                      borderRadius: "0.5rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem",
+                      fontWeight: "600",
+                      color: "#1e40af",
+                      fontSize: "0.95rem",
+                    }}>
+                      🚗 Mã xe: <span style={{ fontSize: "1.1rem" }}>{vehicleCodeParam}</span>
+                    </div>
 
-                  <input
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={(e) => setCccdFile(e.target.files?.[0] || null)}
-                    required
-                    style={{
-                      padding: "0.5rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.375rem",
-                    }}
-                  />
+                    {/* Họ tên */}
+                    <div style={{ display: "grid", gap: "0.4rem" }}>
+                      <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "#374151" }}>Họ và tên *</label>
+                      <input
+                        type="text"
+                        placeholder="Nguyễn Văn A"
+                        value={formData.customer_name}
+                        onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                        required
+                        style={{
+                          padding: "0.7rem 0.875rem",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "0.5rem",
+                          fontSize: "1rem",
+                          width: "100%",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
 
-                  <textarea
-                    placeholder="Ghi chú (Tùy chọn)"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    rows={3}
-                    style={{
-                      padding: "0.5rem",
-                      border: "1px solid #d1d5db",
-                      borderRadius: "0.375rem",
-                      resize: "vertical",
-                    }}
-                  />
+                    {/* SĐT */}
+                    <div style={{ display: "grid", gap: "0.4rem" }}>
+                      <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "#374151" }}>Số điện thoại *</label>
+                      <input
+                        type="tel"
+                        placeholder="0912 345 678"
+                        value={formData.customer_phone}
+                        onChange={(e) => setFormData({ ...formData, customer_phone: e.target.value })}
+                        required
+                        style={{
+                          padding: "0.7rem 0.875rem",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "0.5rem",
+                          fontSize: "1rem",
+                          width: "100%",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
 
-                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    {/* CCCD upload */}
+                    <div style={{ display: "grid", gap: "0.4rem" }}>
+                      <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "#374151" }}>Ảnh CCCD / CMND *</label>
+                      <label style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "0.5rem",
+                        padding: "0.9rem",
+                        border: `2px dashed ${cccdFile ? "#10b981" : "#d1d5db"}`,
+                        borderRadius: "0.5rem",
+                        background: cccdFile ? "#f0fdf4" : "#f9fafb",
+                        cursor: "pointer",
+                        fontSize: "0.875rem",
+                        color: cccdFile ? "#065f46" : "#6b7280",
+                        fontWeight: "500",
+                      }}>
+                        {cccdFile ? `✅ ${cccdFile.name}` : "📷 Chụp hoặc chọn ảnh CCCD"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={(e) => setCccdFile(e.target.files?.[0] || null)}
+                          required
+                          style={{ display: "none" }}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Ghi chú */}
+                    <div style={{ display: "grid", gap: "0.4rem" }}>
+                      <label style={{ fontSize: "0.8rem", fontWeight: "600", color: "#374151" }}>Ghi chú (tùy chọn)</label>
+                      <textarea
+                        placeholder="Yêu cầu đặc biệt..."
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        rows={3}
+                        style={{
+                          padding: "0.7rem 0.875rem",
+                          border: "1px solid #d1d5db",
+                          borderRadius: "0.5rem",
+                          fontSize: "1rem",
+                          resize: "vertical",
+                          width: "100%",
+                          boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+
+                    {/* Submit */}
                     <button
                       type="submit"
                       disabled={publicSubmitting}
                       style={{
-                        padding: "0.75rem 1.5rem",
-                        background: "#10b981",
+                        padding: "0.9rem",
+                        background: publicSubmitting ? "#9ca3af" : "linear-gradient(135deg, #0c4a6e, #0369a1)",
                         color: "white",
                         border: "none",
-                        borderRadius: "0.375rem",
-                        cursor: "pointer",
-                        fontWeight: "500",
-                        opacity: publicSubmitting ? 0.7 : 1,
+                        borderRadius: "0.625rem",
+                        cursor: publicSubmitting ? "not-allowed" : "pointer",
+                        fontWeight: "700",
+                        fontSize: "1.05rem",
                       }}
                     >
-                      {publicSubmitting ? "Đang gửi..." : "Gửi yêu cầu"}
+                      {publicSubmitting ? "⏳ Đang gửi..." : "Gửi yêu cầu mượn xe →"}
                     </button>
-                  </div>
-                </form>
-              </>
-            )}
+
+                    <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#9ca3af", margin: 0 }}>
+                      Sau khi gửi, hãy đưa màn hình cho bảo vệ xác nhận
+                    </p>
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CCCD Lightbox */}
+      {cccdPreview && (
+        <div
+          onClick={() => setCccdPreview(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "1rem",
+          }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ position: "relative", maxWidth: "90vw", maxHeight: "90vh" }}>
+            <LightboxImg src={cccdPreview} />
+            <button
+              onClick={() => setCccdPreview(null)}
+              style={{
+                position: "absolute",
+                top: "-0.75rem",
+                right: "-0.75rem",
+                width: 32,
+                height: 32,
+                borderRadius: "9999px",
+                background: "white",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: "700",
+                fontSize: "1rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              }}
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}

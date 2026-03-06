@@ -5,7 +5,6 @@ import { useAuth } from "@/src/hooks/useAuth";
 import { useVehicles } from "@/src/hooks/useVehicles";
 import { QRCodeCanvas } from "qrcode.react";
 import { useMemo } from "react";
-import { ALLOWED_QR_CODES } from "@/src/lib/allowedQrCodes";
 
 export default function QRPage() {
   const { user } = useAuth();
@@ -30,28 +29,26 @@ export default function QRPage() {
           gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
           gap: "1rem",
         }}>
-          {ALLOWED_QR_CODES.map((code) => {
-            const matched = vehicles.find((v) => v.code === code);
-            const qrValue = `${origin}/rentals?vehicle=${encodeURIComponent(code)}`;
+          {vehicles.map((vehicle) => {
+            const qrValue = `${origin}/rentals?vehicle=${encodeURIComponent(vehicle.code)}`;
             return (
-              <div key={code} style={{
+              <div key={vehicle.id} style={{
                 background: "white",
                 border: "1px solid #e5e7eb",
                 borderRadius: "0.5rem",
                 padding: "1rem",
+                textAlign: "center",
               }}>
-                <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
-                  {code} - {matched ? matched.type : "Chưa gán xe"}
+                <div style={{ fontWeight: 600, marginBottom: "0.5rem", fontSize: "1rem" }}>
+                  {vehicle.code}
+                </div>
+                <div style={{ fontSize: "0.8rem", color: "#6b7280", marginBottom: "0.75rem" }}>
+                  {vehicle.type}
                 </div>
                 <QRCodeCanvas value={qrValue} size={180} />
                 <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#6b7280" }}>
                   Quét QR để mở form thuê xe
                 </div>
-                {!matched && (
-                  <div style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#dc2626" }}>
-                    Mã này chưa tồn tại trong danh sách xe
-                  </div>
-                )}
               </div>
             );
           })}
