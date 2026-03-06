@@ -58,11 +58,11 @@ export interface Rental {
 export interface DashboardStats {
   totalVehicles: number;
   availableVehicles: number;
-  rentedVehicles: number;
+  borrowingVehicles: number;
   maintenanceVehicles: number;
+  pendingRentals: number;
   rentalsToday: number;
   rentalsThisMonth: number;
-  totalRevenue: number;
 }
 
 // API Response Types

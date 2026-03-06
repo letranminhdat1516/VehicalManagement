@@ -14,7 +14,7 @@ export const statsService = {
       }
 
       // Build rental query
-      let rentalQuery = supabase.from("rentals").select("id, created_at, total_amount, status");
+      let rentalQuery = supabase.from("rentals").select("id, created_at, status");
       if (userRole !== "ADMIN" && branchId) {
         rentalQuery = rentalQuery.eq("branch_id", branchId);
       }
@@ -38,12 +38,14 @@ export const statsService = {
       // Calculate stats
       const totalVehicles = vehicles.length;
       const availableVehicles = vehicles.filter((v) => v.status === "AVAILABLE").length;
-      const rentedVehicles = vehicles.filter((v) => v.status === "RENTED").length;
+      const borrowingVehicles = vehicles.filter((v) => v.status === "BORROWING").length;
       const maintenanceVehicles = vehicles.filter((v) => v.status === "MAINTENANCE").length;
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+      const pendingRentals = rentals.filter((r) => r.status === "PENDING").length;
 
       const rentalsToday = rentals.filter((r) => {
         const createdAt = new Date(r.created_at);
@@ -55,18 +57,14 @@ export const statsService = {
         return createdAt >= startOfMonth;
       }).length;
 
-      const totalRevenue = rentals
-        .filter((r) => r.status === "COMPLETED" && r.total_amount)
-        .reduce((sum, r) => sum + (r.total_amount || 0), 0);
-
       const stats: DashboardStats = {
         totalVehicles,
         availableVehicles,
-        rentedVehicles,
+        borrowingVehicles,
         maintenanceVehicles,
+        pendingRentals,
         rentalsToday,
         rentalsThisMonth,
-        totalRevenue,
       };
 
       return { data: stats, error: null };
