@@ -54,6 +54,8 @@ function RentalsContent() {
   const [cccdPreview, setCccdPreview] = useState<string | null>(null);
   const [publicSubmitting, setPublicSubmitting] = useState(false);
   const [publicSubmitted, setPublicSubmitted] = useState(false);
+  const [vehicleInfo, setVehicleInfo] = useState<{ status: string; type: string; code: string } | null>(null);
+  const [vehicleCheckDone, setVehicleCheckDone] = useState(false);
   const [publicReceipt, setPublicReceipt] = useState<{
     vehicleCode: string;
     customerName: string;
@@ -62,6 +64,17 @@ function RentalsContent() {
     cccdFileName: string;
     submittedAt: string;
   } | null>(null);
+
+  // Check trạng thái xe ngay khi load trang public
+  useEffect(() => {
+    if (!isPublic || !vehicleCodeParam) return;
+    fetch(`/api/public-rentals?vehicle_code=${encodeURIComponent(vehicleCodeParam)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.data) setVehicleInfo(d.data);
+      })
+      .finally(() => setVehicleCheckDone(true));
+  }, [isPublic, vehicleCodeParam]);
 
   const formatDate = (value?: string | Date | null) => {
     if (!value) return "-";
@@ -795,7 +808,82 @@ function RentalsContent() {
             </p>
           </div>
 
-          <div style={{ width: "100%", maxWidth: 480 }}>
+          {/* Đang kiểm tra xe */}
+          {!vehicleCheckDone ? (
+            <div style={{ width: "100%", maxWidth: 480 }}>
+              <div style={{
+                background: "white",
+                borderRadius: "1rem",
+                padding: "2.5rem 1.5rem",
+                textAlign: "center",
+                boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+              }}>
+                <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>⏳</div>
+                <div style={{ color: "#6b7280", fontSize: "0.95rem" }}>Đang kiểm tra trạng thái xe...</div>
+              </div>
+            </div>
+
+          /* Xe không sẵn sàng */
+          ) : vehicleInfo && vehicleInfo.status !== "AVAILABLE" ? (
+            <div style={{ width: "100%", maxWidth: 480 }}>
+              <div style={{
+                background: "white",
+                borderRadius: "1rem",
+                boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+                overflow: "hidden",
+              }}>
+                <div style={{
+                  background: "linear-gradient(135deg, #dc2626, #b91c1c)",
+                  padding: "1.25rem 1.5rem",
+                  color: "white",
+                  textAlign: "center",
+                }}>
+                  <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🚫</div>
+                  <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: "700" }}>
+                    Xe không thể mượn
+                  </h2>
+                </div>
+                <div style={{ padding: "1.5rem", textAlign: "center" }}>
+                  <div style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.6rem 1.25rem",
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: "0.5rem",
+                    marginBottom: "1rem",
+                    fontWeight: "600",
+                    color: "#1e40af",
+                    fontSize: "0.95rem",
+                  }}>
+                    🚗 {vehicleInfo.code} — {vehicleInfo.type}
+                  </div>
+                  <p style={{ color: "#374151", fontWeight: "600", fontSize: "1rem", margin: "0 0 0.5rem" }}>
+                    {vehicleInfo.status === "BORROWING"
+                      ? "Xe này đang được mượn bởi người khác."
+                      : "Xe này đang trong quá trình bảo trì."}
+                  </p>
+                  <p style={{ color: "#6b7280", fontSize: "0.875rem", margin: "0 0 1.5rem" }}>
+                    Vui lòng liên hệ bảo vệ hoặc chọn xe khác.
+                  </p>
+                  <div style={{
+                    padding: "0.75rem 1rem",
+                    background: vehicleInfo.status === "BORROWING" ? "#fef3c7" : "#fef2f2",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.85rem",
+                    fontWeight: "600",
+                    color: vehicleInfo.status === "BORROWING" ? "#92400e" : "#991b1b",
+                  }}>
+                    {vehicleInfo.status === "BORROWING" ? "🔄 Đang được mượn" : "🔧 Đang bảo trì"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          ) : (
+            /* Form bình thường */
+            <div style={{ width: "100%", maxWidth: 480 }}>
             <div style={{
               background: "white",
               borderRadius: "1rem",
@@ -1001,6 +1089,7 @@ function RentalsContent() {
               )}
             </div>
           </div>
+          )}
         </div>
       )}
 

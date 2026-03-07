@@ -4,6 +4,25 @@ import crypto from "crypto";
 
 export const runtime = "nodejs";
 
+// GET: kiểm tra trạng thái xe theo code (dùng trước khi hiện form)
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const code = searchParams.get("vehicle_code");
+  if (!code) return NextResponse.json({ error: "Thiếu mã xe" }, { status: 400 });
+
+  const { data: vehicle, error } = await supabaseAdmin
+    .from("vehicles")
+    .select("id, code, status, type")
+    .eq("code", code)
+    .single();
+
+  if (error || !vehicle) {
+    return NextResponse.json({ error: "Không tìm thấy xe" }, { status: 404 });
+  }
+
+  return NextResponse.json({ data: vehicle });
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
